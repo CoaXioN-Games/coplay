@@ -1,0 +1,41 @@
+//-----------------------------------------------------------------------------
+//	COPLAY.VPC
+//
+//	Project Script
+//-----------------------------------------------------------------------------
+
+$Macro COPLAY_LIBDIR	"$SRCDIR\coplay\lib$PLATSUBDIR"
+$Macro COPLAY_SRCDIR	"$SRCDIR\coplay\src"
+
+$Configuration
+{
+	$Compiler
+	{
+		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\coplay\include;$COPLAY_SRCDIR;"
+		$PreprocessorDefinitions			"$BASE;COPLAY"
+	}
+
+	$Linker
+	{
+		$AdditionalLibraryDirectories		"$BASE;$COPLAY_LIBDIR"
+	}
+}
+
+$Project // "Coplay"
+{
+    $Folder "Source Files"
+    {
+        $Folder "Coplay"
+        {
+            $File "$COPLAY_SRCDIR\coplay.h"
+			$File "$COPLAY_SRCDIR\coplay_connectionhandler.cpp"
+			$File "$COPLAY_SRCDIR\coplay_packetforward.cpp"
+        }
+    }
+
+    $Folder	"Link Libraries"
+    {
+		$ImpLibExternal $COPLAY_LIBDIR\SDL2
+		$ImpLibExternal $COPLAY_LIBDIR\SDL2_net
+    }
+}
