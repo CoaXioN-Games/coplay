@@ -82,6 +82,7 @@ void CCoplayConnectionHandler::Update(float frametime)
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Intialization Complete!\n");
         }
     }
+#ifdef CLIENT_DLL
     if (gpGlobals->curtime > lastSteamRPCUpdate + 1.0f)
     {
         if (engine->IsConnected())
@@ -95,7 +96,7 @@ void CCoplayConnectionHandler::Update(float frametime)
                 SteamNetworkingIdentity netID;
                 if (SteamNetworkingSockets()->GetIdentity(&netID))
                 {
-                    V_snprintf(szIP, sizeof(szIP), "%i", netID.GetSteamID64());
+                    V_snprintf(szIP, sizeof(szIP), "%u", netID.GetSteamID64());
                 }
                 else
                 {
@@ -119,6 +120,7 @@ void CCoplayConnectionHandler::Update(float frametime)
             lastSteamRPCUpdate = gpGlobals->curtime;
         }
     }
+#endif
 }
 
 void CCoplayConnectionHandler::OpenP2PSocket()
@@ -193,7 +195,7 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         break;
     }
 }
-
+#ifdef CLIENT_DLL
 void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
 {
     char cmd[k_cchMaxRichPresenceValueLength];
@@ -222,3 +224,4 @@ CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
         SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
     }
 }
+#endif

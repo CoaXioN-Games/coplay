@@ -92,8 +92,9 @@ public:
 
 private:
     STEAM_CALLBACK(CCoplayConnectionHandler, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
+#ifdef CLIENT_DLL
     STEAM_CALLBACK(CCoplayConnectionHandler, JoinGame, GameRichPresenceJoinRequested_t);
-
+#endif
     CCoplayPacketHandler *packethandler;
 };
 extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
