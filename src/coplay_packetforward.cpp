@@ -4,6 +4,7 @@
 // File Last Modified : Mar 8 2024
 //================================================
 
+#include "cbase.h"
 #include "coplay.h"
 
 int CCoplayPacketHandler::Run()

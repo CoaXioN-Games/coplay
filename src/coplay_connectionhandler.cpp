@@ -9,6 +9,7 @@
 // Game/Server side GameSystems dont init until a map is loaded
 // Consequently we have to have this on both client and server, for the server we kill it if not dedicated since we dont need this twice
 
+#include "cbase.h"
 #include <coplay.h>
 #include <inetchannel.h>
 #include <inetchannelinfo.h>
@@ -89,7 +90,6 @@ void CCoplayConnectionHandler::Update(float frametime)
         {
             INetChannel *pChannel = reinterpret_cast< INetChannel * >(engine->GetNetChannelInfo());
 
-            unsigned int nIP = 0;
             char szIP[32];
             if( pChannel->IsLoopback() && HP2PSocket)
             {
@@ -101,7 +101,7 @@ void CCoplayConnectionHandler::Update(float frametime)
                 else
                 {
                     lastSteamRPCUpdate = gpGlobals->curtime;
-                    return;
+                    return; 
                 }
             }
             else if( pChannel )
