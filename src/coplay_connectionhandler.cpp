@@ -114,7 +114,7 @@ void CCoplayConnectionHandler::Update(float frametime)
                 lastSteamRPCUpdate = gpGlobals->curtime;
                 return;
             }
-            char szConnectCMD[64] = "+coplayconnect ";
+            char szConnectCMD[64] = "+coplay_connect ";
             V_strcat(szConnectCMD, szIP, sizeof(szConnectCMD));
             SteamFriends()->SetRichPresence("connect", szConnectCMD);
             lastSteamRPCUpdate = gpGlobals->curtime;
