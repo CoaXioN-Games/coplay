@@ -16,7 +16,7 @@
 #include <steam/isteamgameserver.h>
 
 ConVar coplay_joinfilter("coplay_joinfilter", "1", 0);
-ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0);
+
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
 
@@ -96,7 +96,7 @@ void CCoplayConnectionHandler::Update(float frametime)
                 SteamNetworkingIdentity netID;
                 if (SteamNetworkingSockets()->GetIdentity(&netID))
                 {
-                    V_snprintf(szIP, sizeof(szIP), "%u", netID.GetSteamID64());
+                    V_snprintf(szIP, sizeof(szIP), "%llu", netID.GetSteamID64());
                 }
                 else
                 {
@@ -136,11 +136,12 @@ void CCoplayConnectionHandler::CloseP2PSocket()
     HP2PSocket = 0;
     Role = eConnectionRole_CLIENT;
 }
-CON_COMMAND(coplay_opensocket, "Open p2p listener")
+CON_COMMAND_F(coplay_opensocket, "Open p2p listener", FCVAR_CLIENTDLL)
 {
     g_pCoplayConnectionHandler->OpenP2PSocket();
 }
 
+ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
 void CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
 {
     CoplaySteamSocketTuple *tuple = new CoplaySteamSocketTuple;
@@ -159,15 +160,16 @@ CON_COMMAND_F(coplay_debug_createdummytuple, "Create a empty tuple", FCVAR_HIDDE
 void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
     SteamNetworkingIdentity ID = pParam->m_info.m_identityRemote;
+    ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] CS Updated! Role: %i, Param: %i\n Old Param: %i\n", Role, pParam->m_info.m_eState, pParam->m_eOldState);
     switch (pParam->m_info.m_eState)
     {
     case k_ESteamNetworkingConnectionState_Connecting:
         //New incoming connection
-        if (Role != eConnectionRole_HOST) //Clients only init connections
-        {
-            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_NotOpen, "", false);
-            break;
-        }
+        // if (Role != eConnectionRole_HOST) //Clients only init connections
+        // {
+        //     SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_NotOpen, "", false);
+        //     break;
+        // }
         //TODO: reject if full
 
         switch (coplay_joinfilter.GetInt())
@@ -177,14 +179,10 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
             break;
         case eP2PFilter_EVERYONE:
             SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
-            CreateSteamConnectionTuple(pParam->m_hConn);
             break;
         case eP2PFilter_FRIENDS:
             if (SteamFriends()->HasFriend(ID.GetSteamID(), k_EFriendFlagImmediate))
-            {
                 SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
-                CreateSteamConnectionTuple(pParam->m_hConn);
-            }
             break;
         case eP2PFilter_INVITEONLY:
             //todo ..
@@ -192,6 +190,13 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         default:
             SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_NotOpen, "", false);
         }
+        break;
+    case k_ESteamNetworkingConnectionState_Connected:
+        CreateSteamConnectionTuple(pParam->m_hConn);
+        break;
+
+    case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
+        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", NULL);// Close immediately, we dont have a need for it anymore
         break;
     }
 }
