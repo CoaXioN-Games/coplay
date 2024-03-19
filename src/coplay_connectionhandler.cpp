@@ -20,6 +20,23 @@ ConVar coplay_joinfilter("coplay_joinfilter", "1", 0);
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
 
+uint32 SwapEndian32(uint32 num)
+{
+    byte newnum[4];
+    newnum[0] = ((byte*)&num)[3];
+    newnum[1] = ((byte*)&num)[2];
+    newnum[2] = ((byte*)&num)[1];
+    newnum[3] = ((byte*)&num)[0];
+    return *((uint32*)newnum);
+}
+
+uint16 SwapEndian16(uint16 num)
+{
+    byte newnum[2];
+    newnum[0] = ((byte*)&num)[1];
+    newnum[1] = ((byte*)&num)[0];
+    return *((uint16*)newnum);
+}
 
 class CCoplaySteamBootstrap : public CAutoGameSystem
 // we need to insure the steam api is loaded before we make any objects that need callbacks ( CCoplayConnectionHandler )
@@ -72,7 +89,7 @@ void CCoplayConnectionHandler::Update(float frametime)
     static bool checkavail = true;
     static float lastSteamRPCUpdate = 0.0f;
     SteamAPI_RunCallbacks();
-    if (checkavail)
+    if (checkavail) //The callback specifically to check this is registered by the engine already it seems
     {
         SteamRelayNetworkStatus_t deets;
         if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) == k_ESteamNetworkingAvailability_Current)
@@ -142,14 +159,59 @@ CON_COMMAND_F(coplay_opensocket, "Open p2p listener", FCVAR_CLIENTDLL)
 }
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
-void CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
+
+bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
 {
     CoplaySteamSocketTuple *tuple = new CoplaySteamSocketTuple;
     tuple->SteamConnection = hConn;
-    tuple->LocalSocket = SDLNet_UDP_Open(0);
+
+    int timeout = 20;
+    while (timeout > 0)
+    {
+        int port = RandomInt(26000, 65535);
+        UDPsocket sock = SDLNet_UDP_Open(port);
+        if (sock)
+        {
+            tuple->LocalSocket = sock;
+            tuple->Port = port;
+            break;
+        }
+        timeout--;
+    }
+
+    if (timeout == 0)
+    {
+        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 26000-65535 after 20 retries!)\n");
+        return false;
+    }
+
+    IPaddress addr;
+    IPaddress localaddresses[2];
+    int numinterface = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
+    if (numinterface < 2)
+    {
+        Warning("[Coplay Warning] No Local interface to bind to! Attepting to use 127.0.0.1.\n");
+        //addr.host = SwapEndian32(localaddresses[0].host);
+        addr.host = localaddresses[0].host;
+    }
+    else
+        addr.host = localaddresses[1].host;
+        //addr.host = SwapEndian32(localaddresses[1].host);
+
+    if (Role == eConnectionRole_CLIENT)
+        addr.port = SwapEndian16(27005);
+    else
+        addr.port = SwapEndian16(27015);// default server port, check for this proper later
+    SDLNet_UDP_Bind(tuple->LocalSocket, 1, &addr);
+
     if (coplay_debuglog_socketcreation.GetBool())
-        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket port: %i", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, -1)->port);
+    {
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %u\n", tuple->Port);
+        //ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %i:%i\n", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->host, SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->port);
+
+    }
     SteamConnections.AddToTail(tuple);
+    return true;
 }
 
 CON_COMMAND_F(coplay_debug_createdummytuple, "Create a empty tuple", FCVAR_HIDDEN)
@@ -175,7 +237,7 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         switch (coplay_joinfilter.GetInt())
         {
         case eP2PFilter_NONE:
-            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_NotOpen, "", false);
+            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", false);
             break;
         case eP2PFilter_EVERYONE:
             SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
@@ -188,11 +250,12 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
             //todo ..
 
         default:
-            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_NotOpen, "", false);
+            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", false);
         }
         break;
     case k_ESteamNetworkingConnectionState_Connected:
-        CreateSteamConnectionTuple(pParam->m_hConn);
+        if (!CreateSteamConnectionTuple(pParam->m_hConn))
+            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_PortsFilled, "", NULL);
         break;
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
@@ -200,6 +263,18 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         break;
     }
 }
+
+CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
+{
+    IPaddress addr[8];
+    int num = SDLNet_GetLocalAddresses(addr, sizeof(addr) / sizeof(IPaddress));
+    for (int i = 0; i < num; i++)
+    {
+        Msg("%i.%i.%i.%i\n", ((uint8*)&addr[i].host)[0], ((uint8*)&addr[i].host)[1], ((uint8*)&addr[i].host)[2], ((uint8*)&addr[i].host)[3] );
+
+    }
+}
+
 #ifdef CLIENT_DLL
 void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
 {

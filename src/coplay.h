@@ -15,7 +15,6 @@
 #pragma once
 #ifndef COPLAY_H
 #define COPLAY_H
-#define MAX_CONNECTIONS 32
 
 #define COPLAY_MSG_COLOR Color(170, 255, 0, 255)
 #define COPLAY_DEBUG_MSG_COLOR Color(255, 170, 0, 255)
@@ -32,7 +31,11 @@
 struct CoplaySteamSocketTuple
 {
     UDPsocket LocalSocket = NULL;
+    uint16     Port = 0;
     HSteamNetConnection    SteamConnection = 0;
+
+
+    bool DeletionQueued = false;
 };
 
 enum JoinFilter
@@ -52,8 +55,9 @@ enum ConnectionRole
 
 enum ConnectionEndReason //see the enum ESteamNetConnectionEnd
 {
-    k_ESteamNetConnectionEnd_NotOpen = 1001,
-    k_ESteamNetConnectionEnd_ServerFull = 1002,
+    k_ESteamNetConnectionEnd_App_NotOpen = 1001,
+    k_ESteamNetConnectionEnd_App_ServerFull = 1002,
+    k_ESteamNetConnectionEnd_App_PortsFilled = 1003, //every port we tried is already bound, somehow
 };
 
 class CCoplayPacketHandler : public CThread
@@ -84,10 +88,14 @@ public:
 
     void        OpenP2PSocket();
     void        CloseP2PSocket();
-    void        CreateSteamConnectionTuple(HSteamNetConnection hConn);
+    bool        CreateSteamConnectionTuple(HSteamNetConnection hConn);
 
+    ConnectionRole  GetConnectionRole(){return Role;}
+
+private:
     HSteamListenSocket  HP2PSocket;
     ConnectionRole Role = eConnectionRole_UNAVAILABLE;
+public:
     CUtlVector<CoplaySteamSocketTuple*> SteamConnections;
 
 private:
@@ -98,7 +106,5 @@ private:
     CCoplayPacketHandler *packethandler;
 };
 extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
-
-
 
 #endif
