@@ -186,13 +186,15 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
     }
 
     IPaddress addr;
-    IPaddress localaddresses[2];
-    SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
+    IPaddress localaddresses[16];
+    int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
 
-    if (localaddresses[0].host == SwapEndian32(INADDR_LOOPBACK))
-        addr.host = localaddresses[1].host;
-    else
-        addr.host = localaddresses[0].host;
+    for (int i = 0; i < numlocal; i++)
+    {
+        if (localaddresses[i].host == 0 || localaddresses[i].host == SwapEndian32(INADDR_LOOPBACK))
+            continue;
+        addr.host = localaddresses[i].host;
+    }
 
     if (Role == eConnectionRole_CLIENT)
         addr.port = SwapEndian16(27005);
@@ -204,9 +206,17 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
     {
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %u\n", tuple->Port);
         //ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %i:%i\n", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->host, SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->port);
-
     }
     SteamConnections.AddToTail(tuple);
+
+    if (Role == eConnectionRole_CLIENT)
+    {
+        char cmd[64];
+        uint32 ipnum = addr.host;
+        V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], tuple->Port);
+        engine->ClientCmd(cmd);
+    }
+
     return true;
 }
 
@@ -252,6 +262,7 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
     case k_ESteamNetworkingConnectionState_Connected:
         if (!CreateSteamConnectionTuple(pParam->m_hConn))
             SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_PortsFilled, "", NULL);
+
         break;
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:

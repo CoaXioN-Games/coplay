@@ -8,6 +8,7 @@
 #include "coplay.h"
 #define COPLAY_MAX_PACKETS 16
 
+ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0");
 int CCoplayPacketHandler::Run()
 {
     CoplaySteamSocketTuple *sockettuple;
@@ -33,7 +34,7 @@ int CCoplayPacketHandler::Run()
 
             //Outbound to SDR
             int numSDLRecv = SDLNet_UDP_RecvV(sockettuple->LocalSocket, LocalInboundPackets);
-            if (numSDLRecv > 0)
+            if (numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
             if (numSDLRecv == -1)
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
@@ -47,14 +48,15 @@ int CCoplayPacketHandler::Run()
                 // OutboundSteamMessages[j]->m_identityPeer
                 EResult result = SteamNetworkingSockets()->SendMessageToConnection(sockettuple->SteamConnection, (const void*)LocalInboundPackets[j]->data,
                                                                   LocalInboundPackets[j]->len, k_nSteamNetworkingSend_Unreliable, &messageOut);
-                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Result %i\n", result);
+                if (coplay_debuglog_socketspam.GetBool())
+                    ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Result %i\n", result);
             }
 
             //Inbound from SDR
             SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];
             int numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(sockettuple->SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
 
-            if (numSteamRecv > 0)
+            if (numSteamRecv > 0 && coplay_debuglog_socketspam.GetBool())
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
 
             for (int j = 0; j < numSteamRecv; j++)
