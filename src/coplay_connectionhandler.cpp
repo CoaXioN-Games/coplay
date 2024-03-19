@@ -187,16 +187,12 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
 
     IPaddress addr;
     IPaddress localaddresses[2];
-    int numinterface = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
-    if (numinterface < 2)
-    {
-        Warning("[Coplay Warning] No Local interface to bind to! Attepting to use 127.0.0.1.\n");
-        //addr.host = SwapEndian32(localaddresses[0].host);
-        addr.host = localaddresses[0].host;
-    }
-    else
+    SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
+
+    if (localaddresses[0].host == SwapEndian32(INADDR_LOOPBACK))
         addr.host = localaddresses[1].host;
-        //addr.host = SwapEndian32(localaddresses[1].host);
+    else
+        addr.host = localaddresses[0].host;
 
     if (Role == eConnectionRole_CLIENT)
         addr.port = SwapEndian16(27005);
