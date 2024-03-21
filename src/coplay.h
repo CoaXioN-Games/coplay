@@ -7,7 +7,7 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Feb 24 2024
+// File Last Modified : Mar 21 2024
 //================================================
 
 //Shared defines
@@ -32,18 +32,6 @@
 #include "steam/isteamfriends.h"
 #include "steam/steam_api.h"
 
-
-
-struct CoplaySteamSocketTuple
-{
-    UDPsocket LocalSocket = NULL;
-    uint16     Port = 0;
-    HSteamNetConnection    SteamConnection = 0;
-
-
-    bool DeletionQueued = false;
-};
-
 enum JoinFilter
 {
     eP2PFilter_NONE = -1,
@@ -54,7 +42,8 @@ enum JoinFilter
 
 enum ConnectionRole
 {
-    eConnectionRole_UNAVAILABLE = 0,
+    eConnectionRole_UNAVAILABLE = -1,
+    eConnectionRole_NOT_CONNECTED = 0,
     eConnectionRole_HOST,
     eConnectionRole_CLIENT
 };
@@ -62,54 +51,60 @@ enum ConnectionRole
 enum ConnectionEndReason //see the enum ESteamNetConnectionEnd
 {
     k_ESteamNetConnectionEnd_App_NotOpen = 1001,
-    k_ESteamNetConnectionEnd_App_ServerFull = 1002,
-    k_ESteamNetConnectionEnd_App_PortsFilled = 1003, //every port we tried is already bound, somehow
+    k_ESteamNetConnectionEnd_App_ServerFull,
+    k_ESteamNetConnectionEnd_App_PortsFilled, //every port we tried is already bound, somehow
+    k_ESteamNetConnectionEnd_App_ClosedByPeer,
 };
 
-class CCoplayPacketHandler : public CThread
+class CCoplayConnection : public CThread
 {
     int Run();
 public:
-    CCoplayPacketHandler()
+    CCoplayConnection()
     {
-        SetName("coplay");
+        SetName("coplayconnection");
     }
-    bool ShouldRun = true;
+    UDPsocket LocalSocket = NULL;
+    uint16     Port = 0;
+    HSteamNetConnection    SteamConnection = 0;
+
+    void QueueForDeletion(){DeletionQueued = true;}
+    virtual void OnExit();
+
+private:
+    bool DeletionQueued = false;
+
+    float LastPacket = 0;
 };
 
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame
 {
 public:
-    virtual bool Init();
     virtual void Update(float frametime);
 
     virtual void Shutdown()
     {
-        if (packethandler)
-        {
-            packethandler->ShouldRun = false;
-            packethandler->Join();//dont segfault on every exit
-        }
+        CloseAllConnections();
     }
 
     void        OpenP2PSocket();
     void        CloseP2PSocket();
+    void        CloseAllConnections();
     bool        CreateSteamConnectionTuple(HSteamNetConnection hConn);
 
-    ConnectionRole  GetConnectionRole(){return Role;}
+
+    ConnectionRole Role = eConnectionRole_UNAVAILABLE;
 
 private:
     HSteamListenSocket  HP2PSocket;
-    ConnectionRole Role = eConnectionRole_UNAVAILABLE;
 public:
-    CUtlVector<CoplaySteamSocketTuple*> SteamConnections;
+    CUtlVector<CCoplayConnection*> Connections;
 
 private:
     STEAM_CALLBACK(CCoplayConnectionHandler, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
 #ifdef CLIENT_DLL
     STEAM_CALLBACK(CCoplayConnectionHandler, JoinGame, GameRichPresenceJoinRequested_t);
 #endif
-    CCoplayPacketHandler *packethandler;
 };
 extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
 
