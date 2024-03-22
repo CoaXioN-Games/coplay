@@ -53,7 +53,7 @@ int CCoplayConnection::Run()
         }
 
         //Inbound from SDR
-        SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];//These cant be reused as easily like SDL's packets'
+        SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];//These cant be reused as easily like SDL's packets
 
 
         int numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));

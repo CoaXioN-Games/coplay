@@ -201,7 +201,7 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
         if (localaddresses[i].host == 0)
             continue;
         uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-        if (firstoctet == 127 || firstoctet == 192 || firstoctet == 172)
+        if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
             continue;
         addr.host = localaddresses[i].host;
     }
