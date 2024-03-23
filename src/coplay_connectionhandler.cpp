@@ -22,7 +22,9 @@
 #include <steam/isteamgameserver.h>
 
 ConVar coplay_joinfilter("coplay_joinfilter", "1", 0);
-ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
+
+ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0);
+ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0);
 
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
@@ -240,7 +242,10 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
 void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
     SteamNetworkingIdentity ID = pParam->m_info.m_identityRemote;
-    ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] CS Updated! Role: %i, Param: %i\n Old Param: %i\n", Role, pParam->m_info.m_eState, pParam->m_eOldState);
+    if (coplay_debuglog_steamconnstatus.GetBool())
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Connection status updated: Coplay role: %i, Peer SteamID64: %u,\n Param: %i\n Old Param: %i\n",
+                    Role, pParam->m_info.m_identityRemote.GetSteamID64(), pParam->m_info.m_eState, pParam->m_eOldState);
+
     switch (pParam->m_info.m_eState)
     {
     case k_ESteamNetworkingConnectionState_Connecting:

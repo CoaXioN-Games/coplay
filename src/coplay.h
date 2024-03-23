@@ -63,6 +63,7 @@ extern ConVar coplay_timeoutduration;
 
 extern ConVar coplay_debuglog_socketcreation;
 extern ConVar coplay_debuglog_socketspam;
+extern ConVar coplay_debuglog_steamconnstatus;
 
 class CCoplayConnection : public CThread
 {
