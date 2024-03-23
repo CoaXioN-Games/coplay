@@ -25,6 +25,8 @@
 #define COPLAY_MSG_COLOR Color(170, 255, 0, 255)
 #define COPLAY_DEBUG_MSG_COLOR Color(255, 170, 0, 255)
 
+#define COPLAY_MAX_PACKETS 16
+
 #include <cbase.h>
 #include "SDL2/SDL_net.h"
 #include "steam/isteamnetworkingsockets.h"
@@ -48,7 +50,7 @@ enum ConnectionRole
     eConnectionRole_CLIENT
 };
 
-enum ConnectionEndReason //see the enum ESteamNetConnectionEnd
+enum ConnectionEndReason //see the enum ESteamNetConnectionEnd in steamnetworkingtypes.h
 {
     k_ESteamNetConnectionEnd_App_NotOpen = 1001,
     k_ESteamNetConnectionEnd_App_ServerFull,
@@ -56,14 +58,22 @@ enum ConnectionEndReason //see the enum ESteamNetConnectionEnd
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
 };
 
+extern ConVar coplay_joinfilter;
+extern ConVar coplay_timeoutduration;
+
+extern ConVar coplay_debuglog_socketcreation;
+extern ConVar coplay_debuglog_socketspam;
+
 class CCoplayConnection : public CThread
 {
     int Run();
 public:
-    CCoplayConnection()
+    CCoplayConnection(HSteamNetConnection hConn)
     {
-        SetName("coplayconnection");
+        SteamConnection = hConn;
+        LastPacketTime = gpGlobals->curtime;
     }
+
     UDPsocket LocalSocket = NULL;
     uint16     Port = 0;
     HSteamNetConnection    SteamConnection = 0;
@@ -74,7 +84,7 @@ public:
 private:
     bool DeletionQueued = false;
 
-    float LastPacket = 0;
+    float LastPacketTime = 0;//This is for when the steam connection is still being kept alive but there is no actual activity
 };
 
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame

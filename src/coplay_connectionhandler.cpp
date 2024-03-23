@@ -22,6 +22,7 @@
 #include <steam/isteamgameserver.h>
 
 ConVar coplay_joinfilter("coplay_joinfilter", "1", 0);
+ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
 
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
@@ -165,13 +166,9 @@ CON_COMMAND_F(coplay_opensocket, "Open p2p listener", FCVAR_CLIENTDLL)
     g_pCoplayConnectionHandler->OpenP2PSocket();
 }
 
-ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "1", FCVAR_CLIENTDLL | FCVAR_ARCHIVE);
-
 bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
 {
-    CCoplayConnection *connection = new CCoplayConnection;
-    connection->SteamConnection = hConn;
-
+    CCoplayConnection *connection = new CCoplayConnection(hConn);
     int timeout = 50;
     while (timeout > 0)// TODO: Should probably change this..
     {
@@ -217,6 +214,10 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %u\n", connection->Port);
         //ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %i:%i\n", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->host, SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->port);
     }
+    char threadname[32];
+    V_snprintf(threadname, sizeof(threadname), "coplayconnection%i",addr.port);
+    connection->SetName(threadname);
+
     connection->Start();
     Connections.AddToTail(connection);
 
@@ -314,7 +315,9 @@ CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
     {
         SteamNetworkingIdentity netID;
         netID.SetSteamID64(atoll(arg));
-        SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
+        SteamNetworkingConfigValue_t options[1];
+        options[0].SetInt32(k_ESteamNetworkingConfig_EnableDiagnosticsUI, 1);
+        SteamNetworkingSockets()->ConnectP2P(netID, 0, sizeof(options)/sizeof(SteamNetworkingConfigValue_t), options);
     }
 }
 #endif

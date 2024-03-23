@@ -12,9 +12,11 @@
 
 #include "cbase.h"
 #include "coplay.h"
-#define COPLAY_MAX_PACKETS 16
+
+ConVar coplay_timeoutduration("coplay_timeoutduration", "45");
 
 ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0");
+
 int CCoplayConnection::Run()
 {
     UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS + 1, 1500);//normal ethernet MTU size
@@ -31,8 +33,12 @@ int CCoplayConnection::Run()
 
         //Outbound to SDR
         int numSDLRecv = SDLNet_UDP_RecvV(LocalSocket, LocalInboundPackets);
-        if (numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
-            ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
+        if (numSDLRecv > 0)
+        {
+            if(coplay_debuglog_socketspam.GetBool())
+                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
+            LastPacketTime = gpGlobals->curtime;
+        }
         if (numSDLRecv == -1)
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
 
@@ -75,6 +81,9 @@ int CCoplayConnection::Run()
         for (int j = 0; j < numSteamRecv; j++)
             InboundSteamMessages[j]->Release();
 
+
+        if (LastPacketTime + coplay_timeoutduration.GetFloat() < gpGlobals->curtime)
+            QueueForDeletion();
     }
     //Cleanup
 
@@ -87,4 +96,7 @@ void CCoplayConnection::OnExit()
     SDLNet_UDP_Close(LocalSocket);
     SteamNetworkingSockets()->CloseConnection(SteamConnection, k_ESteamNetConnectionEnd_App_ClosedByPeer, "", false);
     g_pCoplayConnectionHandler->Connections.FindAndRemove(this);
+
+    if (coplay_debuglog_socketcreation.GetBool())
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket closed with port %i.\n", Port);
 }
