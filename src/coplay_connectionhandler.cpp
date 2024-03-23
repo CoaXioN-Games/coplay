@@ -243,7 +243,7 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
 {
     SteamNetworkingIdentity ID = pParam->m_info.m_identityRemote;
     if (coplay_debuglog_steamconnstatus.GetBool())
-        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Connection status updated: Coplay role: %i, Peer SteamID64: %u,\n Param: %i\n Old Param: %i\n",
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam Connection status updated: Coplay role: %i, Peer SteamID64: %llu,\n Param: %i\n Old Param: %i\n",
                     Role, pParam->m_info.m_identityRemote.GetSteamID64(), pParam->m_info.m_eState, pParam->m_eOldState);
 
     switch (pParam->m_info.m_eState)
