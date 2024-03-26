@@ -7,7 +7,7 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Mar 21 2024
+// File Last Modified : Mar 26 2024
 //================================================
 
 #include "cbase.h"
@@ -37,7 +37,6 @@ int CCoplayConnection::Run()
         {
             if(coplay_debuglog_socketspam.GetBool())
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
-            LastPacketTime = gpGlobals->curtime;
         }
         if (numSDLRecv == -1)
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
@@ -64,8 +63,12 @@ int CCoplayConnection::Run()
 
         int numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
 
-        if (numSteamRecv > 0 && coplay_debuglog_socketspam.GetBool())
-            ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
+        if (numSteamRecv > 0)
+        {
+            if (coplay_debuglog_socketspam.GetBool())
+                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
+            LastPacketTime = gpGlobals->realtime;
+        }
 
         for (int j = 0; j < numSteamRecv; j++)
         {
@@ -82,7 +85,7 @@ int CCoplayConnection::Run()
             InboundSteamMessages[j]->Release();
 
 
-        if (LastPacketTime + coplay_timeoutduration.GetFloat() < gpGlobals->curtime)
+        if (LastPacketTime + coplay_timeoutduration.GetFloat() < gpGlobals->realtime)
             QueueForDeletion();
     }
     //Cleanup

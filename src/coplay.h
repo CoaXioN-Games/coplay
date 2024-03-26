@@ -7,7 +7,7 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Mar 21 2024
+// File Last Modified : Mar 26 2024
 //================================================
 
 //Shared defines
@@ -69,14 +69,11 @@ class CCoplayConnection : public CThread
 {
     int Run();
 public:
-    CCoplayConnection(HSteamNetConnection hConn)
-    {
-        SteamConnection = hConn;
-        LastPacketTime = gpGlobals->curtime;
-    }
+    CCoplayConnection(HSteamNetConnection hConn);
 
     UDPsocket LocalSocket = NULL;
-    uint16     Port = 0;
+    uint16    Port = 0;
+    IPaddress SendbackAddress;
     HSteamNetConnection    SteamConnection = 0;
 
     void QueueForDeletion(){DeletionQueued = true;}
@@ -103,10 +100,11 @@ public:
     void        CloseAllConnections();
     bool        CreateSteamConnectionTuple(HSteamNetConnection hConn);
 
-
-    ConnectionRole Role = eConnectionRole_UNAVAILABLE;
+    ConnectionRole GetRole(){return Role;}
+    void           SetRole(ConnectionRole newrole);
 
 private:
+    ConnectionRole Role = eConnectionRole_UNAVAILABLE;
     HSteamListenSocket  HP2PSocket;
 public:
     CUtlVector<CCoplayConnection*> Connections;
