@@ -21,35 +21,29 @@
 #include <inetchannelinfo.h>
 #include <steam/isteamgameserver.h>
 
+static void UpdateSleepTime()
+{
+    if (g_pCoplayConnectionHandler)
+    {
+        if (coplay_connectionthread_hz.GetFloat() > 0)
+            g_pCoplayConnectionHandler->usSleepTime = 1000000/coplay_connectionthread_hz.GetFloat();
+        else
+            g_pCoplayConnectionHandler->usSleepTime = 0;
+    }
+}
+
 ConVar coplay_joinfilter("coplay_joinfilter", "1", 0, "Whos allowed to connect to our Server?\n"
                          "-1 : Nobody (Coplay inactive)\n"
                          "0  : Anybody\n"
                          "1  : Steam Friends\n"
                          "2  : Invite Only (not yet added)\n");
+ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "400", 0, "Number of times to check a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0);
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0);
 
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
-
-uint32 SwapEndian32(uint32 num)
-{
-    byte newnum[4];
-    newnum[0] = ((byte*)&num)[3];
-    newnum[1] = ((byte*)&num)[2];
-    newnum[2] = ((byte*)&num)[1];
-    newnum[3] = ((byte*)&num)[0];
-    return *((uint32*)newnum);
-}
-
-uint16 SwapEndian16(uint16 num)
-{
-    byte newnum[2];
-    newnum[0] = ((byte*)&num)[1];
-    newnum[1] = ((byte*)&num)[0];
-    return *((uint16*)newnum);
-}
 
 class CCoplaySteamBootstrap : public CAutoGameSystem
 // we need to insure the steam api is loaded before we make any objects that need callbacks ( CCoplayConnectionHandler )
@@ -86,6 +80,11 @@ public:
         return true;
     }
 }coplaybootstrap;
+
+CCoplayConnectionHandler::CCoplayConnectionHandler()
+{
+    UpdateSleepTime();
+}
 
 void CCoplayConnectionHandler::Update(float frametime)
 {
@@ -267,68 +266,7 @@ CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
 
 }
 
-CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
-{
-    SteamConnection = hConn;
-    LastPacketTime = gpGlobals->realtime;
 
-    int timeout = 50;
-
-    while (timeout > 0)// TODO: Should probably change this..
-    {
-        int port = RandomInt(26000, 65535);
-        UDPsocket sock = SDLNet_UDP_Open(port);
-        if (sock)
-        {
-            LocalSocket = sock;
-            Port = port;
-            break;
-        }
-        timeout--;
-    }
-
-    if (timeout == 0)
-    {
-        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 26000-65535 after 50 retries!)\n");
-        //return false;
-    }
-
-    IPaddress addr;
-    addr.host = 0;
-    IPaddress localaddresses[16];
-    int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
-
-    for (int i = 0; i < numlocal; i++)
-    {
-        if (localaddresses[i].host == 0)
-            continue;
-        uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-        if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
-            continue;
-        addr.host = localaddresses[i].host;
-    }
-    if (addr.host == 0)
-    {
-        Warning("[Coplay Warning] Didn't find a suitable local address! Trying loopback..\n");
-        addr.host = SwapEndian32(INADDR_LOOPBACK);
-    }
-
-    if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
-        addr.port = SwapEndian16(27005);//SDLNet wants these in network byte order
-    else
-        addr.port = SwapEndian16(27015);// default server port, check for this proper later
-    SDLNet_UDP_Bind(LocalSocket, 1, &addr);// "Inbound" Channel
-    SendbackAddress = addr;
-
-    if (coplay_debuglog_socketcreation.GetBool())
-    {
-        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %u\n", Port);
-        //ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %i:%i\n", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->host, SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->port);
-    }
-    char threadname[32];
-    V_snprintf(threadname, sizeof(threadname), "coplayconnection%i", Port);
-    SetName(threadname);
-}
 
 #ifdef CLIENT_DLL
 void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)

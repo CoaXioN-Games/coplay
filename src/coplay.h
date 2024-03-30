@@ -60,10 +60,29 @@ enum ConnectionEndReason //see the enum ESteamNetConnectionEnd in steamnetworkin
 
 extern ConVar coplay_joinfilter;
 extern ConVar coplay_timeoutduration;
+extern ConVar coplay_connectionthread_hz;
 
 extern ConVar coplay_debuglog_socketcreation;
 extern ConVar coplay_debuglog_socketspam;
 extern ConVar coplay_debuglog_steamconnstatus;
+
+static uint32 SwapEndian32(uint32 num)
+{
+    byte newnum[4];
+    newnum[0] = ((byte*)&num)[3];
+    newnum[1] = ((byte*)&num)[2];
+    newnum[2] = ((byte*)&num)[1];
+    newnum[3] = ((byte*)&num)[0];
+    return *((uint32*)newnum);
+}
+
+static uint16 SwapEndian16(uint16 num)
+{
+    byte newnum[2];
+    newnum[0] = ((byte*)&num)[1];
+    newnum[1] = ((byte*)&num)[0];
+    return *((uint16*)newnum);
+}
 
 class CCoplayConnection : public CThread
 {
@@ -88,6 +107,8 @@ private:
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame
 {
 public:
+    CCoplayConnectionHandler();
+
     virtual void Update(float frametime);
 
     virtual void Shutdown()
@@ -102,6 +123,8 @@ public:
 
     ConnectionRole GetRole(){return Role;}
     void           SetRole(ConnectionRole newrole);
+
+    uint32         usSleepTime;
 
 private:
     ConnectionRole Role = eConnectionRole_UNAVAILABLE;
