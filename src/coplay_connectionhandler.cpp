@@ -37,7 +37,7 @@ ConVar coplay_joinfilter("coplay_joinfilter", "1", 0, "Whos allowed to connect t
                          "0  : Anybody\n"
                          "1  : Steam Friends\n"
                          "2  : Invite Only (not yet added)\n");
-ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "400", 0, "Number of times to check a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
+ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", 0, "Number of times to run a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0);
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0);
