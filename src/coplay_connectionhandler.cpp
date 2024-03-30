@@ -10,10 +10,7 @@
 // File Last Modified : Mar 26 2024
 //================================================
 
-// Deal with connections
-
-// Game/Server side GameSystems dont init until a map is loaded
-// Consequently we have to have this on both client and server, for the server we kill it if not dedicated since we dont need this twice
+// Make, delete and keep track of connections
 
 #include "cbase.h"
 #include <coplay.h>
@@ -97,7 +94,7 @@ void CCoplayConnectionHandler::Update(float frametime)
         if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) == k_ESteamNetworkingAvailability_Current)
         {
             checkavail = false;
-            Role = eConnectionRole_NOT_CONNECTED;
+            SetRole((eConnectionRole_NOT_CONNECTED);
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Steam Relay Connection successful!\n");
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Intialization Complete!\n");
         }
@@ -146,7 +143,7 @@ void CCoplayConnectionHandler::Update(float frametime)
 void CCoplayConnectionHandler::OpenP2PSocket()
 {
     CloseP2PSocket();
-    Role = eConnectionRole_HOST;
+    SetRole(eConnectionRole_HOST);
     HP2PSocket =  SteamNetworkingSockets()->CreateListenSocketP2P(0, 0, NULL);
 }
 
@@ -155,7 +152,7 @@ void CCoplayConnectionHandler::CloseP2PSocket()
     CloseAllConnections();
     SteamNetworkingSockets()->CloseListenSocket(HP2PSocket);
     HP2PSocket = 0;
-    Role = eConnectionRole_CLIENT;
+    SetRole(eConnectionRole_CLIENT);
 }
 
 void CCoplayConnectionHandler::CloseAllConnections()
@@ -196,7 +193,7 @@ void CCoplayConnectionHandler::SetRole(ConnectionRole newrole)
     {
         ConVarRef sv_lan("sv_lan");
         sv_lan.SetValue("1");//sv_lan off will heartbeat the server and allow clients to see our ip
-        engine_no_focus_sleep.SetValue("0"); // without this, if the host tabs out everyone lags..
+        engine_no_focus_sleep.SetValue("0"); // without this, if the host tabs out everyone lags
     }
     else
         engine_no_focus_sleep.SetValue(engine_no_focus_sleep.GetDefault());
@@ -213,7 +210,7 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
     SteamNetworkingIdentity ID = pParam->m_info.m_identityRemote;
     if (coplay_debuglog_steamconnstatus.GetBool())
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam Connection status updated: Coplay role: %i, Peer SteamID64: %llu,\n Param: %i\n Old Param: %i\n",
-                    Role, pParam->m_info.m_identityRemote.GetSteamID64(), pParam->m_info.m_eState, pParam->m_eOldState);
+                    GetRole(), pParam->m_info.m_identityRemote.GetSteamID64(), pParam->m_info.m_eState, pParam->m_eOldState);
 
     switch (pParam->m_info.m_eState)
     {
@@ -289,7 +286,7 @@ CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
         g_pCoplayConnectionHandler->SetRole(eConnectionRole_CLIENT);
     }
 
-    if (V_strstr(arg, "."))//normal server
+    if (V_strstr(arg, "."))//normal server, probably
     {
         char cmd[64];
         V_snprintf(cmd, sizeof(cmd), "connect %s", arg );

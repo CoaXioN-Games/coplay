@@ -70,7 +70,7 @@ int CCoplayConnection::Run()
 
         numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
 
-        if (numSteamRecv > 0)
+        if (numSteamRecv > 0 || engine->IsConnected())
         {
             if (coplay_debuglog_socketspam.GetBool())
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
@@ -79,10 +79,6 @@ int CCoplayConnection::Run()
 
         for (uint8 j = 0; j < numSteamRecv; j++)
         {
-            //UDPpacket *packet = SDLNet_AllocPacket(InboundSteamMessages[j]->GetSize() + 16);
-            //memcpy(SteamPacket->data, InboundSteamMessages[j]->GetData(), InboundSteamMessages[j]->GetSize());
-            //SteamPacket->len = InboundSteamMessages[j]->GetSize();
-
             SteamPacket.data = (uint8*)InboundSteamMessages[j]->GetData();
             SteamPacket.len  = InboundSteamMessages[j]->GetSize();
 
@@ -90,10 +86,8 @@ int CCoplayConnection::Run()
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Wasnt sent! %s\n", SDLNet_GetError());
         }
 
-
         for (uint8 j = 0; j < numSteamRecv; j++)
             InboundSteamMessages[j]->Release();
-
 
         if (LastPacketTime + coplay_timeoutduration.GetFloat() < gpGlobals->realtime)
             QueueForDeletion();
