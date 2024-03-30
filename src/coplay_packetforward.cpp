@@ -13,22 +13,6 @@
 #include "cbase.h"
 #include "coplay.h"
 
-#ifdef WIN32
-#include "Windows.h"
-void usleep(unsigned int usec)
-{
-    HANDLE timer;
-    LARGE_INTEGER ft;
-
-    ft.QuadPart = -(10 * (__int64)usec);
-
-    timer = CreateWaitableTimer(NULL, TRUE, NULL);
-    SetWaitableTimer(timer, &ft, 0, NULL, NULL, 0);
-    WaitForSingleObject(timer, INFINITE);
-    CloseHandle(timer);
-}
-#endif
-
 ConVar coplay_timeoutduration("coplay_timeoutduration", "45");
 
 ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0");
@@ -56,7 +40,7 @@ int CCoplayConnection::Run()
             continue;
         }
 
-        usleep(g_pCoplayConnectionHandler->usSleepTime);//dont work too hard
+        Sleep(g_pCoplayConnectionHandler->msSleepTime);//dont work too hard
 
         //Outbound to SDR
         numSDLRecv = SDLNet_UDP_RecvV(LocalSocket, LocalInboundPackets);

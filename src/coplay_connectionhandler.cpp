@@ -23,9 +23,9 @@ static void UpdateSleepTime()
     if (g_pCoplayConnectionHandler)
     {
         if (coplay_connectionthread_hz.GetFloat() > 0)
-            g_pCoplayConnectionHandler->usSleepTime = 1000000/coplay_connectionthread_hz.GetFloat();
+            g_pCoplayConnectionHandler->msSleepTime = 1000/coplay_connectionthread_hz.GetFloat();
         else
-            g_pCoplayConnectionHandler->usSleepTime = 0;
+            g_pCoplayConnectionHandler->msSleepTime = 0;
     }
 }
 

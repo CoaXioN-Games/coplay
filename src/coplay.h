@@ -124,7 +124,7 @@ public:
     ConnectionRole GetRole(){return Role;}
     void           SetRole(ConnectionRole newrole);
 
-    uint32         usSleepTime;
+    uint32         msSleepTime;
 
 private:
     ConnectionRole Role = eConnectionRole_UNAVAILABLE;
