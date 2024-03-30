@@ -94,7 +94,7 @@ void CCoplayConnectionHandler::Update(float frametime)
         if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) == k_ESteamNetworkingAvailability_Current)
         {
             checkavail = false;
-            SetRole((eConnectionRole_NOT_CONNECTED);
+            SetRole(eConnectionRole_NOT_CONNECTED);
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Steam Relay Connection successful!\n");
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Intialization Complete!\n");
         }
