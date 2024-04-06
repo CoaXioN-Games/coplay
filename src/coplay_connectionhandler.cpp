@@ -171,16 +171,39 @@ CON_COMMAND_F(coplay_opensocket, "Open p2p listener", FCVAR_CLIENTDLL)
 
 bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
 {
-    CCoplayConnection *connection = new CCoplayConnection(hConn);
+    SteamNetConnectionInfo_t newinfo;
+    if (!SteamNetworkingSockets()->GetConnectionInfo(hConn, &newinfo))
+        return false;
 
-    connection->Start();
-    Connections.AddToTail(connection);
+    bool alreadyconnected = false;
+    for (int i = 0; i< Connections.Count(); i++)
+    {
+        SteamNetConnectionInfo_t info;
+        if (SteamNetworkingSockets()->GetConnectionInfo(Connections[i]->SteamConnection, &info))
+        {
+            if (info.m_identityRemote.GetSteamID64() == newinfo.m_identityRemote.GetSteamID64());
+            {
+                Connections[i]->SteamConnection = hConn;
+                alreadyconnected = true;
+                break;
+            }
+        }
+    }
+
+    if (!alreadyconnected)
+    {
+        CCoplayConnection *connection = new CCoplayConnection(hConn);
+
+        connection->Start();
+        Connections.AddToTail(connection);
+    }
+
 
     if (Role == eConnectionRole_CLIENT)
     {
         char cmd[64];
-        uint32 ipnum = connection->SendbackAddress.host;
-        V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], connection->Port);
+        uint32 ipnum = Connections.Tail()->SendbackAddress.host;
+        V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], Connections.Tail()->Port);
         engine->ClientCmd(cmd);
     }
 
