@@ -7,16 +7,16 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Mar 26 2024
+// File Last Modified : Apr 5 2024
 //================================================
 
 //Shared defines
 
 // Ok, here the rundown on the concept behind this
 // After socket opening and all the handshake stuff:
-// The client has a UDP listener on port 27015 that relays all packets -
+// The client has a UDP listener that relays all packets -
 // through the Steam datagram, the server machine recieves them and -
-// sends the UDP packets localy to the game server which has a similar mechanism to send back to the client.
+// sends the UDP packets locally to the game server which has a similar mechanism to send back to the client.
 // This allows us to make use of the P2P features steam offers within the Source SDK without any networking code changes
 #pragma once
 #ifndef COPLAY_H
@@ -113,12 +113,12 @@ public:
 
     virtual void Shutdown()
     {
-        CloseAllConnections();
+        CloseAllConnections(true);
     }
 
     void        OpenP2PSocket();
     void        CloseP2PSocket();
-    void        CloseAllConnections();
+    void        CloseAllConnections(bool waitforjoin = false);
     bool        CreateSteamConnectionTuple(HSteamNetConnection hConn);
 
     ConnectionRole GetRole(){return Role;}

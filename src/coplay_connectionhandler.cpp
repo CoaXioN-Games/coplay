@@ -7,7 +7,7 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Mar 26 2024
+// File Last Modified : Apr 5 2024
 //================================================
 
 // Make, delete and keep track of connections
@@ -29,12 +29,12 @@ static void UpdateSleepTime()
     }
 }
 
-ConVar coplay_joinfilter("coplay_joinfilter", "1", 0, "Whos allowed to connect to our Server?\n"
+ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed to connect to our Server?\n"
                          "-1 : Nobody (Coplay inactive)\n"
                          "0  : Anybody\n"
                          "1  : Steam Friends\n"
                          "2  : Invite Only (not yet added)\n");
-ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", 0, "Number of times to run a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
+ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE, "Number of times to run a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0);
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0);
@@ -155,12 +155,13 @@ void CCoplayConnectionHandler::CloseP2PSocket()
     SetRole(eConnectionRole_CLIENT);
 }
 
-void CCoplayConnectionHandler::CloseAllConnections()
+void CCoplayConnectionHandler::CloseAllConnections(bool waitforjoin)
 {
     for (int i = 0; i< Connections.Count(); i++)
         Connections[i]->QueueForDeletion();
-    for (int i = 0; i< Connections.Count(); i++)
-        Connections[i]->Join();
+    if (waitforjoin)
+        for (int i = 0; i< Connections.Count(); i++)
+            Connections[i]->Join();
 }
 
 CON_COMMAND_F(coplay_opensocket, "Open p2p listener", FCVAR_CLIENTDLL)
@@ -188,15 +189,26 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
 
 void CCoplayConnectionHandler::SetRole(ConnectionRole newrole)
 {
+    ConVarRef sv_lan("sv_lan");
     ConVarRef engine_no_focus_sleep("engine_no_focus_sleep");
-    if (newrole == eConnectionRole_HOST)
+    ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
+    switch (newrole)
     {
-        ConVarRef sv_lan("sv_lan");
+    case eConnectionRole_HOST:
         sv_lan.SetValue("1");//sv_lan off will heartbeat the server and allow clients to see our ip
         engine_no_focus_sleep.SetValue("0"); // without this, if the host tabs out everyone lags
-    }
-    else
+        net_usesocketsforloopback.SetValue("1");
+        break;
+    case eConnectionRole_CLIENT:
         engine_no_focus_sleep.SetValue(engine_no_focus_sleep.GetDefault());
+        net_usesocketsforloopback.SetValue("1");
+        break;
+    case eConnectionRole_NOT_CONNECTED:
+        net_usesocketsforloopback.SetValue("0");
+        CloseAllConnections();
+    }
+
+
     Role = newrole;
 }
 
