@@ -181,7 +181,7 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
         SteamNetConnectionInfo_t info;
         if (SteamNetworkingSockets()->GetConnectionInfo(Connections[i]->SteamConnection, &info))
         {
-            if (info.m_identityRemote.GetSteamID64() == newinfo.m_identityRemote.GetSteamID64());
+            if (info.m_identityRemote.GetSteamID64() == newinfo.m_identityRemote.GetSteamID64())
             {
                 Connections[i]->SteamConnection = hConn;
                 alreadyconnected = true;
