@@ -214,20 +214,20 @@ void CCoplayConnectionHandler::SetRole(ConnectionRole newrole)
 {
     ConVarRef sv_lan("sv_lan");
     ConVarRef engine_no_focus_sleep("engine_no_focus_sleep");
-    ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
+    //ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
     switch (newrole)
     {
     case eConnectionRole_HOST:
         sv_lan.SetValue("1");//sv_lan off will heartbeat the server and allow clients to see our ip
         engine_no_focus_sleep.SetValue("0"); // without this, if the host tabs out everyone lags
-        net_usesocketsforloopback.SetValue("1");
+        //net_usesocketsforloopback.SetValue("1");
         break;
     case eConnectionRole_CLIENT:
         engine_no_focus_sleep.SetValue(engine_no_focus_sleep.GetDefault());
-        net_usesocketsforloopback.SetValue("1");
+        //net_usesocketsforloopback.SetValue("1");
         break;
     case eConnectionRole_NOT_CONNECTED:
-        net_usesocketsforloopback.SetValue("0");
+        //net_usesocketsforloopback.SetValue("0");
         CloseAllConnections();
     }
 

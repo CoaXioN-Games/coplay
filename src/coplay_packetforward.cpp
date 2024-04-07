@@ -127,31 +127,50 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
 
     if (!sock)
     {
-        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 26000-65535 after 50 retries!)\n");
+        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 60000-65535!)\n");
         //return false;
     }
 
     IPaddress addr;
-    //addr.host = 0;
-    addr.host = SwapEndian32(INADDR_LOOPBACK);//SDLNet wants these in network byte order
+    addr.host = 0;
+    //addr.host = SwapEndian32(INADDR_LOOPBACK);//SDLNet wants these in network byte order
 
-    //IPaddress localaddresses[16];
-    //int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
+    IPaddress localaddresses[16];
+    int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
 
-    // for (int i = 0; i < numlocal; i++)
-    // {
-    //     if (localaddresses[i].host == 0)
-    //         continue;
-    //     uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-    //     if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
-    //         continue;
-    //     addr.host = localaddresses[i].host;
-    // }
-    // if (addr.host == 0)
-    // {
-    //     Warning("[Coplay Warning] Didn't find a suitable local address! Trying loopback..\n");
-    //     addr.host = SwapEndian32(INADDR_LOOPBACK);
-    // }
+    // this is kind of a mess, from testing using 127.0.0.1 & "net_usesocketsforloopback" doesnt work on windows
+    // and 192.* addresses only work for some people that have only those...
+    for (int i = 0; i < numlocal; i++)
+    {
+        if (localaddresses[i].host == 0)
+            continue;
+        uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
+        if (firstoctet == 127 || firstoctet == 172|| firstoctet == 192)
+            continue;
+        addr.host = localaddresses[i].host;
+    }
+
+    if (addr.host == 0)
+    {
+        Warning("[Coplay Warning] Didn't find a suitable local address! Trying the 192.* range..\n");
+        for (int i = 0; i < numlocal; i++)
+        {
+            if (localaddresses[i].host == 0)
+                continue;
+            uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
+            if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
+                continue;
+            addr.host = localaddresses[i].host;
+        }
+    }
+
+    if (addr.host == 0)
+    {
+        Warning("[Coplay Warning] Still didn't find a suitable local address! Trying loopback..\n");
+        addr.host = SwapEndian32(INADDR_LOOPBACK);
+        ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
+        net_usesocketsforloopback.SetValue("1");
+    }
 
     if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
         addr.port = SwapEndian16(27005);
