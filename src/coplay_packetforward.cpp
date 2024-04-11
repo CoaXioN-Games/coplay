@@ -44,11 +44,10 @@ int CCoplayConnection::Run()
 
         //Outbound to SDR
         numSDLRecv = SDLNet_UDP_RecvV(LocalSocket, LocalInboundPackets);
-        if (numSDLRecv > 0)
-        {
-            if(coplay_debuglog_socketspam.GetBool())
-                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
-        }
+
+        if( numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
+            ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
+
         if (numSDLRecv == -1)
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
 
@@ -70,12 +69,12 @@ int CCoplayConnection::Run()
 
         numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
 
+        if (numSteamRecv > 0 && coplay_debuglog_socketspam.GetBool())
+            ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
+
         if (numSteamRecv > 0 || engine->IsConnected())
-        {
-            if (coplay_debuglog_socketspam.GetBool())
-                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
             LastPacketTime = gpGlobals->realtime;
-        }
+
 
         for (uint8 j = 0; j < numSteamRecv; j++)
         {
@@ -114,7 +113,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     LastPacketTime = gpGlobals->realtime;
 
     UDPsocket sock = NULL;
-    for (int port = 60000; port < 65535; port++)
+    for (int port = 36000; port < 37000; port++)
     {
         sock = SDLNet_UDP_Open(port);
         if (sock)
@@ -127,7 +126,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
 
     if (!sock)
     {
-        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 60000-65535!)\n");
+        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 26000-27000!)\n");
         //return false;
     }
 
