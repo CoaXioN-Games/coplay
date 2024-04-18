@@ -7,7 +7,7 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Apr 5 2024
+// File Last Modified : Apr 13 2024
 //================================================
 
 //Shared defines
@@ -54,17 +54,20 @@ enum ConnectionEndReason //see the enum ESteamNetConnectionEnd in steamnetworkin
 {
     k_ESteamNetConnectionEnd_App_NotOpen = 1001,
     k_ESteamNetConnectionEnd_App_ServerFull,
-    k_ESteamNetConnectionEnd_App_PortsFilled, //every port we tried is already bound, somehow
+    k_ESteamNetConnectionEnd_App_PortsFilled, //every port we tried is already bound
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
 };
 
 extern ConVar coplay_joinfilter;
 extern ConVar coplay_timeoutduration;
 extern ConVar coplay_connectionthread_hz;
+extern ConVar coplay_portrange_begin;
+extern ConVar coplay_portrange_end;
 
 extern ConVar coplay_debuglog_socketcreation;
 extern ConVar coplay_debuglog_socketspam;
 extern ConVar coplay_debuglog_steamconnstatus;
+extern ConVar coplay_debuglog_scream;
 
 static uint32 SwapEndian32(uint32 num)
 {

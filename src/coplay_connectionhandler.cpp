@@ -7,7 +7,7 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Apr 5 2024
+// File Last Modified : Apr 16 2024
 //================================================
 
 // Make, delete and keep track of connections
@@ -36,8 +36,8 @@ ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed 
                          "2  : Invite Only (not yet added)\n");
 ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE, "Number of times to run a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
 
-ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0);
-ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0);
+ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0, "Prints more information when a socket is opened or closed.\n");
+ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
 
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
@@ -235,10 +235,14 @@ void CCoplayConnectionHandler::SetRole(ConnectionRole newrole)
     Role = newrole;
 }
 
-// CON_COMMAND_F(coplay_debug_createdummytuple, "Create a empty tuple", FCVAR_HIDDEN)
-// {
-//     g_pCoplayConnectionHandler->CreateSteamConnectionTuple(NULL);
-// }
+CON_COMMAND_F(coplay_debug_createdummyconnection, "Create a empty connection", 0)
+{
+    //g_pCoplayConnectionHandler->CreateSteamConnectionTuple(NULL);
+    CCoplayConnection *connection = new CCoplayConnection(NULL);
+
+    connection->Start();
+    g_pCoplayConnectionHandler->Connections.AddToTail(connection);
+}
 
 void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
@@ -311,6 +315,7 @@ void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
 
 CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
 {
+
     if (args.ArgC() < 1)
         return;
     char arg[128];
@@ -329,10 +334,18 @@ CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
     }
     else
     {
+        SteamRelayNetworkStatus_t deets;
+        if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) != k_ESteamNetworkingAvailability_Current)
+        {
+            Warning("[Coplay Warning] Can't Connect! Connection to Steam Datagram Relay not yet established.\n");
+            return;
+        }
         SteamNetworkingIdentity netID;
         netID.SetSteamID64(atoll(arg));
         SteamNetworkingConfigValue_t options[1];
         options[0].SetInt32(k_ESteamNetworkingConfig_EnableDiagnosticsUI, 1);
+
+        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to %llu....\n", netID.GetSteamID64());
         SteamNetworkingSockets()->ConnectP2P(netID, 0, sizeof(options)/sizeof(SteamNetworkingConfigValue_t), options);
     }
 }

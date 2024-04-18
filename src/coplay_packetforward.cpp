@@ -7,16 +7,18 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Apr 5 2024
+// File Last Modified : Apr 16 2024
 //================================================
 
 #include "cbase.h"
 #include "coplay.h"
 
-ConVar coplay_timeoutduration("coplay_timeoutduration", "45");
+ConVar coplay_timeoutduration("coplay_timeoutduration", "45", FCVAR_ARCHIVE);
+ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
+ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
 
-ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0");
-
+ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "1", 0, "Prints the number of packets recieved by either interface if more than 0.\n");
+ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
 
 int CCoplayConnection::Run()
 {
@@ -33,6 +35,8 @@ int CCoplayConnection::Run()
     int64 messageOut;
     while(!DeletionQueued)
     {
+        if (coplay_debuglog_scream.GetBool())
+            Msg("A!!!!!!!!!!!!");
         if (LocalSocket == NULL ||  SteamConnection == 0)
         {
             Warning("[Coplay Warning] A registered Coplay socket was invalid! Deleting.\n");
@@ -40,10 +44,18 @@ int CCoplayConnection::Run()
             continue;
         }
 
-        Sleep(g_pCoplayConnectionHandler->msSleepTime);//dont work too hard
+        if (coplay_debuglog_scream.GetBool())
+            Msg("Sleep %ims", g_pCoplayConnectionHandler->msSleepTime);
+        ThreadSleep(g_pCoplayConnectionHandler->msSleepTime);//dont work too hard
+
 
         //Outbound to SDR
+        if (coplay_debuglog_scream.GetBool())
+            Msg("B!!!!!!!!!!!!!");
         numSDLRecv = SDLNet_UDP_RecvV(LocalSocket, LocalInboundPackets);
+        //numSDLRecv = SDLNet_UDP_Recv(LocalSocket, LocalInboundPackets[0]);
+        if (coplay_debuglog_scream.GetBool())
+            Msg("c.\n");
 
         if( numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
@@ -97,6 +109,22 @@ int CCoplayConnection::Run()
     return 0;
 }
 
+CON_COMMAND_F(coplay_debug_senddummy_steam, "", FCVAR_CLIENTDLL)
+{
+    for (int i = 0; i < g_pCoplayConnectionHandler->Connections.Count(); i++)
+    {
+        CCoplayConnection* con = g_pCoplayConnectionHandler->Connections[i];
+        if (!con)
+            continue;
+        char string[40] = "Completely Random Test String (tm)";
+        int64 msgout;
+        SteamNetworkingSockets()->SendMessageToConnection(con->SteamConnection, string, sizeof(string),
+                                                          k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
+                                                          &msgout);
+
+    }
+}
+
 void CCoplayConnection::OnExit()
 {
     SDLNet_UDP_Close(LocalSocket);
@@ -113,7 +141,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     LastPacketTime = gpGlobals->realtime;
 
     UDPsocket sock = NULL;
-    for (int port = 36000; port < 37000; port++)
+    for (uint16 port = coplay_portrange_begin.GetInt(); port < coplay_portrange_end.GetInt(); port++)
     {
         sock = SDLNet_UDP_Open(port);
         if (sock)
