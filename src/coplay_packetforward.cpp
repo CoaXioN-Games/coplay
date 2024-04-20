@@ -17,7 +17,7 @@ ConVar coplay_timeoutduration("coplay_timeoutduration", "45", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
 
-ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "1", 0, "Prints the number of packets recieved by either interface if more than 0.\n");
+ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0", 0, "Prints the number of packets recieved by either interface if more than 0.\n");
 ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
 
 int CCoplayConnection::Run()
