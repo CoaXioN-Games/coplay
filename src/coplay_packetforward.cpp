@@ -46,7 +46,7 @@ int CCoplayConnection::Run()
 
         if (coplay_debuglog_scream.GetBool())
             Msg("Sleep %ims", g_pCoplayConnectionHandler->msSleepTime);
-        ThreadSleep(g_pCoplayConnectionHandler->msSleepTime);//dont work too hard
+        ThreadSleep(min(2000, g_pCoplayConnectionHandler->msSleepTime));//dont work too hard
 
 
         //Outbound to SDR

@@ -10,13 +10,15 @@
 // File Last Modified : Apr 16 2024
 //================================================
 
-// Make, delete and keep track of connections
+// Make, delete and keep track of steam connections & lobbies
 
 #include "cbase.h"
 #include <coplay.h>
 #include <inetchannel.h>
 #include <inetchannelinfo.h>
 #include <steam/isteamgameserver.h>
+
+static char *queuedcommand = NULL;
 
 static void UpdateSleepTime()
 {
@@ -29,11 +31,17 @@ static void UpdateSleepTime()
     }
 }
 
-ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed to connect to our Server?\n"
-                         "-1 : Nobody (Coplay inactive)\n"
-                         "0  : Anybody\n"
-                         "1  : Steam Friends\n"
-                         "2  : Invite Only (not yet added)\n");
+static void ChangeLobbyType()
+{
+    if (g_pCoplayConnectionHandler && g_pCoplayConnectionHandler->GetLobby().ConvertToUint64())
+        SteamMatchmaking()->SetLobbyType(g_pCoplayConnectionHandler->GetLobby(), (ELobbyType)coplay_lobbytype.GetInt());
+}
+
+ConVar coplay_lobbytype("coplay_lobbytype", "1", FCVAR_ARCHIVE, "Whos allowed to connect to our Server?\n"
+                         "0  : Invite Only\n"
+                         "1  : Steam Friends  or Invite\n"
+                         "2  : Public, will be advertised\n",
+                        true, 0, true, 2, (FnChangeCallback_t)ChangeLobbyType);// See the enum ELobbyType in isteammatchmaking.h
 ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE, "Number of times to run a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0, "Prints more information when a socket is opened or closed.\n");
@@ -48,7 +56,7 @@ class CCoplaySteamBootstrap : public CAutoGameSystem
 public:
     virtual bool Init()
     {
-    #ifdef GAME_DLL
+    #ifdef GAME_DLL //may support dedicated servers at some point
         if (!engine->IsDedicatedServer())
         {
             Remove(this);
@@ -88,7 +96,7 @@ void CCoplayConnectionHandler::Update(float frametime)
     static bool checkavail = true;
     static float lastSteamRPCUpdate = 0.0f;
     SteamAPI_RunCallbacks();
-    if (checkavail) //The callback specifically to check this is registered by the engine already it seems
+    if (checkavail) //The callback specifically to check this is registered by the engine already
     {
         SteamRelayNetworkStatus_t deets;
         if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) == k_ESteamNetworkingAvailability_Current)
@@ -97,47 +105,62 @@ void CCoplayConnectionHandler::Update(float frametime)
             SetRole(eConnectionRole_NOT_CONNECTED);
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Steam Relay Connection successful!\n");
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Intialization Complete!\n");
+
+            if (queuedcommand != NULL)
+            {
+                ConColorMsg(COPLAY_MSG_COLOR, "%s\n", queuedcommand);
+                engine->ClientCmd(queuedcommand);
+                free(queuedcommand);
+            }
         }
     }
 
-#ifdef CLIENT_DLL
     if (gpGlobals->realtime > lastSteamRPCUpdate + 1.0f)
     {
-        if (engine->IsConnected())
-        {
-            INetChannel *pChannel = reinterpret_cast< INetChannel * >(engine->GetNetChannelInfo());
+        // if (engine->IsConnected())
+        // {
+        //     INetChannel *pChannel = reinterpret_cast< INetChannel * >(engine->GetNetChannelInfo());
 
-            char szIP[32];
-            if( pChannel->IsLoopback() && HP2PSocket)
-            {
-                SteamNetworkingIdentity netID;
-                if (SteamNetworkingSockets()->GetIdentity(&netID))
-                {
-                    V_snprintf(szIP, sizeof(szIP), "%llu", netID.GetSteamID64());
-                }
-                else
-                {
-                    lastSteamRPCUpdate = gpGlobals->realtime;
-                    return; 
-                }
-            }
-            else if( pChannel )
-            {
-                V_snprintf(szIP, sizeof(szIP), "%s", pChannel->GetAddress());
-            }
-            else
-            {
-                SteamFriends()->SetRichPresence("connect", "");
-                lastSteamRPCUpdate = gpGlobals->realtime;
-                return;
-            }
-            char szConnectCMD[64] = "+coplay_connect ";
-            V_strcat(szConnectCMD, szIP, sizeof(szConnectCMD));
-            SteamFriends()->SetRichPresence("connect", szConnectCMD);
-            lastSteamRPCUpdate = gpGlobals->realtime;
+        //     char szIP[32];
+        //     if( pChannel->IsLoopback() && HP2PSocket)
+        //     {
+        //         //SteamNetworkingIdentity netID;
+        //         if (Lobby.ConvertToUint64())//SteamNetworkingSockets()->GetIdentity(&netID)
+        //         {
+        //             V_snprintf(szIP, sizeof(szIP), "%llu", Lobby.ConvertToUint64());
+        //         }
+        //         else
+        //         {
+        //             lastSteamRPCUpdate = gpGlobals->realtime;
+        //             return;
+        //         }
+        //     }
+        //     else if( pChannel )
+        //     {
+        //         V_snprintf(szIP, sizeof(szIP), "%s", pChannel->GetAddress());
+        //     }
+        //     else
+        //     {
+        //         SteamFriends()->SetRichPresence("connect", "");
+        //         lastSteamRPCUpdate = gpGlobals->realtime;
+        //         return;
+        //     }
+        //     char szConnectCMD[64] = "+coplay_connect ";
+        //     V_strcat(szConnectCMD, szIP, sizeof(szConnectCMD));
+        //     SteamFriends()->SetRichPresence("connect", szConnectCMD);
+
+        // } //Lobbies do connection rpc for us now
+        if (Role == eConnectionRole_HOST && Lobby.ConvertToUint64())
+        {
+            ConVarRef hostname("hostname");
+            char map[256];
+            V_StrRight(engine->GetLevelName(), -5, map, sizeof(map));// remove "maps/"
+            V_StrLeft(map, -4, map, sizeof(map));// remove ".bsp"
+            SteamMatchmaking()->SetLobbyData(Lobby, "map", map);
+            SteamMatchmaking()->SetLobbyData(Lobby, "hostname", hostname.GetString());
         }
+        lastSteamRPCUpdate = gpGlobals->realtime;
     }
-#endif
 }
 
 void CCoplayConnectionHandler::OpenP2PSocket()
@@ -145,6 +168,8 @@ void CCoplayConnectionHandler::OpenP2PSocket()
     CloseP2PSocket();
     SetRole(eConnectionRole_HOST);
     HP2PSocket =  SteamNetworkingSockets()->CreateListenSocketP2P(0, 0, NULL);
+    ELobbyType lobbytype = k_ELobbyTypePublic;//coplay_lobbymode.GetInt();
+    SteamMatchmaking()->CreateLobby(lobbytype, 33);// Let maxplayers do this
 }
 
 void CCoplayConnectionHandler::CloseP2PSocket()
@@ -152,6 +177,8 @@ void CCoplayConnectionHandler::CloseP2PSocket()
     CloseAllConnections();
     SteamNetworkingSockets()->CloseListenSocket(HP2PSocket);
     HP2PSocket = 0;
+    SteamMatchmaking()->LeaveLobby(Lobby);
+    Lobby.SetFromUint64( 0 );
     SetRole(eConnectionRole_CLIENT);
 }
 
@@ -256,28 +283,12 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
     case k_ESteamNetworkingConnectionState_Connecting:
         if (GetRole() == eConnectionRole_HOST)
         {
-            switch (coplay_joinfilter.GetInt())
-            {
-            case eP2PFilter_NONE:
-                SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", false);
-                break;
-            case eP2PFilter_EVERYONE:
+            if (IsUserInLobby(Lobby, pParam->m_info.m_identityRemote.GetSteamID()))
                 SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
-                break;
-            case eP2PFilter_FRIENDS:
-                if (SteamFriends()->HasFriend(ID.GetSteamID(), k_EFriendFlagImmediate))
-                    SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
-                break;
-            case eP2PFilter_INVITEONLY:
-                //TODO ..
-
-            default:
-                SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", false);
-            }
         }
         else
         {
-            SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
+           SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
         }
         break;
 
@@ -299,12 +310,77 @@ CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
     int num = SDLNet_GetLocalAddresses(addr, sizeof(addr) / sizeof(IPaddress));
     for (int i = 0; i < num; i++)
         Msg("%i.%i.%i.%i\n", ((uint8*)&addr[i].host)[0], ((uint8*)&addr[i].host)[1], ((uint8*)&addr[i].host)[2], ((uint8*)&addr[i].host)[3] );
+}
 
+void CCoplayConnectionHandler::LobbyCreated(LobbyCreated_t *pParam)
+{
+    Lobby = pParam->m_ulSteamIDLobby;
+    char dir[512];
+    V_snprintf(dir, sizeof(dir), "%s", engine->GetGameDirectory());
+    CUtlVector<char*> split;
+#if defined(LINUX) || defined(OSX)
+    V_SplitString(dir, "/", split);
+#else
+    V_SplitString(dir, "\\", split);
+#endif
+    SteamMatchmaking()->SetLobbyData(Lobby, "gamedir", split.Tail());
+    ConColorMsg(COPLAY_MSG_COLOR, "dir: %s", split.Tail());
+}
+
+void CCoplayConnectionHandler::LobbyJoined(LobbyEnter_t *pParam)
+{
+    SteamNetworkingIdentity netID;
+    SteamNetworkingSockets()->GetIdentity(&netID);
+    if (SteamMatchmaking()->GetLobbyOwner(pParam->m_ulSteamIDLobby) == netID.GetSteamID64())
+        return; //Don't do anything extra if its ours
+
+    SetRole(eConnectionRole_CLIENT);
+    Lobby = pParam->m_ulSteamIDLobby;
+    SteamNetworkingIdentity netIDRemote;
+    netIDRemote.SetSteamID(SteamMatchmaking()->GetLobbyOwner(Lobby));
+    SteamNetworkingConfigValue_t options[1];
+    options[0].SetInt32(k_ESteamNetworkingConfig_EnableDiagnosticsUI, 1);
+    SteamNetworkingSockets()->ConnectP2P(netIDRemote, 0, sizeof(options)/sizeof(SteamNetworkingConfigValue_t), options);
+    ConColorMsg(COPLAY_MSG_COLOR, "Lobby owner: %llu\n", netIDRemote.GetSteamID64());
+}
+
+void CCoplayConnectionHandler::LobbyJoinRequested(GameLobbyJoinRequested_t *pParam)
+{
+    SteamMatchmaking()->JoinLobby(pParam->m_steamIDLobby);
+}
+
+CON_COMMAND(coplay_listlobbies, "")
+{
+    char dir[512];
+    V_snprintf(dir, sizeof(dir), "%s", engine->GetGameDirectory());
+    CUtlVector<char*> split;
+#if defined(LINUX) || defined(OSX)
+    V_SplitString(dir, "/", split);
+#else
+    V_SplitString(dir, "\\", split);
+#endif
+
+    SteamMatchmaking()->AddRequestLobbyListStringFilter("gamedir", split.Tail(), k_ELobbyComparisonEqual);
+    SteamAPICall_t apiCall = SteamMatchmaking()->RequestLobbyList();
+    g_pCoplayConnectionHandler->LobbyListResult.Set( apiCall, g_pCoplayConnectionHandler, &CCoplayConnectionHandler::OnLobbyListcmd);
+}
+
+void CCoplayConnectionHandler::OnLobbyListcmd(LobbyMatchList_t *pLobbyMatchList, bool bIOFailure)
+{
+    ConColorMsg(COPLAY_MSG_COLOR, "%i Available Lobbies:\n|    Name    |    Map    |    Game    |    ID    |\n", pLobbyMatchList->m_nLobbiesMatching);
+    for (uint32 i = 0; i < pLobbyMatchList->m_nLobbiesMatching; i++)
+    {
+        CSteamID lobby = SteamMatchmaking()->GetLobbyByIndex(i);
+        ConColorMsg(COPLAY_MSG_COLOR, "| %s | %s | %s | %llu |\n",
+                    SteamMatchmaking()->GetLobbyData(lobby, "hostname"),
+                    SteamMatchmaking()->GetLobbyData(lobby, "map"),
+                    SteamMatchmaking()->GetLobbyData(lobby, "gamedir"),
+                    lobby.ConvertToUint64()
+                    );
+    }
 }
 
 
-
-#ifdef CLIENT_DLL
 void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
 {
     char cmd[k_cchMaxRichPresenceValueLength];
@@ -313,40 +389,63 @@ void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
     engine->ClientCmd(cmd);
 }
 
-CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
-{
+// CON_COMMAND(coplay_connect, "connect wrapper that adds coplay functionality")
+// {
+//     if (args.ArgC() < 1)
+//         return;
+//     char arg[128];
+//     V_snprintf(arg, sizeof(arg), "%s", args.ArgS());
+//     if(g_pCoplayConnectionHandler)
+//     {
+//         g_pCoplayConnectionHandler->CloseAllConnections();
+//         g_pCoplayConnectionHandler->SetRole(eConnectionRole_CLIENT);
+//     }
 
+//     if (V_strstr(arg, "."))//normal server, probably
+//     {
+//         char cmd[64];
+//         V_snprintf(cmd, sizeof(cmd), "connect %s", arg );
+//         engine->ClientCmd(cmd);
+//     }
+//     else
+//     {
+//         SteamRelayNetworkStatus_t deets;
+//         if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) != k_ESteamNetworkingAvailability_Current)
+//         {
+//             Warning("[Coplay Warning] Can't Connect! Connection to Steam Datagram Relay not yet established.\n");
+
+//             //Game is probably just starting, queue the command to be run once the Steam network connection is established
+//             int len = strlen(args.GetCommandString());
+//             queuedcommand = (char*)malloc(len);
+//             V_snprintf(queuedcommand, len, "%s", args.GetCommandString());
+//             return;
+//         }
+
+//         ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to lobby %s....\n", arg);
+//         CSteamID steamid;
+//         steamid.SetFromUint64(atoll(arg));
+//         SteamMatchmaking()->JoinLobby(steamid);
+//     }
+// }
+
+CON_COMMAND(connect_lobby, "")
+{
     if (args.ArgC() < 1)
         return;
     char arg[128];
     V_snprintf(arg, sizeof(arg), "%s", args.ArgS());
-    if(g_pCoplayConnectionHandler)
+    if (!g_pCoplayConnectionHandler)
     {
-        g_pCoplayConnectionHandler->CloseAllConnections();
-        g_pCoplayConnectionHandler->SetRole(eConnectionRole_CLIENT);
-    }
+        Warning("[Coplay Warning] Can't Connect! Connection to Steam Datagram Relay not yet established.\n");
 
-    if (V_strstr(arg, "."))//normal server, probably
-    {
-        char cmd[64];
-        V_snprintf(cmd, sizeof(cmd), "connect %s", arg );
-        engine->ClientCmd(cmd);
+        //             //Game is probably just starting, queue the command to be run once the Steam network connection is established
+        int len = strlen(args.GetCommandString());
+        queuedcommand = (char*)malloc(len);
+        V_snprintf(queuedcommand, len, "%s", args.GetCommandString());
+        return;
     }
-    else
-    {
-        SteamRelayNetworkStatus_t deets;
-        if ( SteamNetworkingUtils()->GetRelayNetworkStatus(&deets) != k_ESteamNetworkingAvailability_Current)
-        {
-            Warning("[Coplay Warning] Can't Connect! Connection to Steam Datagram Relay not yet established.\n");
-            return;
-        }
-        SteamNetworkingIdentity netID;
-        netID.SetSteamID64(atoll(arg));
-        SteamNetworkingConfigValue_t options[1];
-        options[0].SetInt32(k_ESteamNetworkingConfig_EnableDiagnosticsUI, 1);
-
-        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to %llu....\n", netID.GetSteamID64());
-        SteamNetworkingSockets()->ConnectP2P(netID, 0, sizeof(options)/sizeof(SteamNetworkingConfigValue_t), options);
-    }
+    ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to lobby %s....\n", arg);
+    CSteamID steamid;
+    steamid.SetFromUint64(atoll(arg));
+    SteamMatchmaking()->JoinLobby(steamid);
 }
-#endif

@@ -32,15 +32,8 @@
 #include "steam/isteamnetworkingsockets.h"
 #include "steam/isteamnetworkingutils.h"
 #include "steam/isteamfriends.h"
+#include "steam/isteammatchmaking.h"
 #include "steam/steam_api.h"
-
-enum JoinFilter
-{
-    eP2PFilter_NONE = -1,
-    eP2PFilter_EVERYONE = 0,
-    eP2PFilter_FRIENDS,
-    eP2PFilter_INVITEONLY,
-};
 
 enum ConnectionRole
 {
@@ -58,7 +51,7 @@ enum ConnectionEndReason //see the enum ESteamNetConnectionEnd in steamnetworkin
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
 };
 
-extern ConVar coplay_joinfilter;
+extern ConVar coplay_lobbytype;
 extern ConVar coplay_timeoutduration;
 extern ConVar coplay_connectionthread_hz;
 extern ConVar coplay_portrange_begin;
@@ -85,6 +78,17 @@ static uint16 SwapEndian16(uint16 num)
     newnum[0] = ((byte*)&num)[1];
     newnum[1] = ((byte*)&num)[0];
     return *((uint16*)newnum);
+}
+
+static bool IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
+{
+    uint32 numMembers = SteamMatchmaking()->GetNumLobbyMembers(LobbyID);
+    for (uint32 i = 0; i < numMembers; i++)
+    {
+        if (UserID.ConvertToUint64() == SteamMatchmaking()->GetLobbyMemberByIndex(LobbyID, i).ConvertToUint64())
+            return true;
+    }
+    return false;
 }
 
 class CCoplayConnection : public CThread
@@ -127,19 +131,27 @@ public:
     ConnectionRole GetRole(){return Role;}
     void           SetRole(ConnectionRole newrole);
 
+    CSteamID    GetLobby(){return Lobby;}
+
     uint32         msSleepTime;
 
 private:
-    ConnectionRole Role = eConnectionRole_UNAVAILABLE;
+    ConnectionRole      Role = eConnectionRole_UNAVAILABLE;
     HSteamListenSocket  HP2PSocket;
+    CSteamID            Lobby;
+
 public:
     CUtlVector<CCoplayConnection*> Connections;
 
+    CCallResult<CCoplayConnectionHandler, LobbyMatchList_t> LobbyListResult;
+    void OnLobbyListcmd( LobbyMatchList_t *pLobbyMatchList, bool bIOFailure);
+
 private:
     STEAM_CALLBACK(CCoplayConnectionHandler, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
-#ifdef CLIENT_DLL
-    STEAM_CALLBACK(CCoplayConnectionHandler, JoinGame, GameRichPresenceJoinRequested_t);
-#endif
+    STEAM_CALLBACK(CCoplayConnectionHandler, JoinGame,                GameRichPresenceJoinRequested_t);
+    STEAM_CALLBACK(CCoplayConnectionHandler, LobbyCreated,            LobbyCreated_t);
+    STEAM_CALLBACK(CCoplayConnectionHandler, LobbyJoined,             LobbyEnter_t);
+    STEAM_CALLBACK(CCoplayConnectionHandler, LobbyJoinRequested,      GameLobbyJoinRequested_t);
 };
 extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
 
