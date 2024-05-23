@@ -11,6 +11,11 @@
 $Macro COPLAY_LIBDIR	"$SRCDIR\coplay\lib$PLATSUBDIR"
 $Macro COPLAY_SRCDIR	"$SRCDIR\coplay\src"
 
+// The AppID for the Source 2013 MP SDK does not have lobbies/matchmaking enabled
+// non-steam mods are basically SOL for using lobbies
+// There are ways around, but none of them are good, probably break steam TOS and must be done on a per mod basis anyway
+// Set the preprocessor definition "COPLAY_USE_LOBBIES" in your mods vpc if you know your appid supports it.
+
 $Configuration
 {
 	$Compiler

@@ -7,7 +7,6 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Apr 16 2024
 //================================================
 
 #include "cbase.h"
@@ -46,7 +45,7 @@ int CCoplayConnection::Run()
 
         if (coplay_debuglog_scream.GetBool())
             Msg("Sleep %ims", g_pCoplayConnectionHandler->msSleepTime);
-        ThreadSleep(min(2000, g_pCoplayConnectionHandler->msSleepTime));//dont work too hard
+        ThreadSleep(g_pCoplayConnectionHandler->msSleepTime);//dont work too hard
 
 
         //Outbound to SDR
@@ -214,5 +213,13 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     char threadname[32];
     V_snprintf(threadname, sizeof(threadname), "coplayconnection%i", Port);
     SetName(threadname);
+}
+
+CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
+{
+    IPaddress addr[16];
+    int num = SDLNet_GetLocalAddresses(addr, sizeof(addr) / sizeof(IPaddress));
+    for (int i = 0; i < num; i++)
+        Msg("%i.%i.%i.%i\n", ((uint8*)&addr[i].host)[0], ((uint8*)&addr[i].host)[1], ((uint8*)&addr[i].host)[2], ((uint8*)&addr[i].host)[3] );
 }
 

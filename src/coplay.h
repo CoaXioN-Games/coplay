@@ -7,7 +7,6 @@
 //================================================
 // CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
-// File Last Modified : Apr 13 2024
 //================================================
 
 //Shared defines
@@ -27,14 +26,27 @@
 
 #define COPLAY_MAX_PACKETS 16
 
+//For vpcless quick testing
+//#define COPLAY_USE_LOBBIES
+
 #include <cbase.h>
 #include "SDL2/SDL_net.h"
 #include "steam/isteamnetworkingsockets.h"
 #include "steam/isteamnetworkingutils.h"
 #include "steam/isteamfriends.h"
-#include "steam/isteammatchmaking.h"
 #include "steam/steam_api.h"
-
+#ifdef COPLAY_USE_LOBBIES
+#include "steam/isteammatchmaking.h"
+#endif
+#ifndef COPLAY_USE_LOBBIES
+enum JoinFilter
+{
+    //eP2PFilter_NONE = -1,
+    eP2PFilter_INVITEONLY = 0,
+    eP2PFilter_FRIENDS = 1,
+    eP2PFilter_EVERYONE = 2,
+};
+#endif
 enum ConnectionRole
 {
     eConnectionRole_UNAVAILABLE = -1,
@@ -51,7 +63,7 @@ enum ConnectionEndReason //see the enum ESteamNetConnectionEnd in steamnetworkin
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
 };
 
-extern ConVar coplay_lobbytype;
+extern ConVar coplay_joinfilter;
 extern ConVar coplay_timeoutduration;
 extern ConVar coplay_connectionthread_hz;
 extern ConVar coplay_portrange_begin;
@@ -61,6 +73,9 @@ extern ConVar coplay_debuglog_socketcreation;
 extern ConVar coplay_debuglog_socketspam;
 extern ConVar coplay_debuglog_steamconnstatus;
 extern ConVar coplay_debuglog_scream;
+#ifdef COPLAY_USE_LOBBIES
+extern ConVar coplay_debuglog_lobbyupdated;
+#endif
 
 static uint32 SwapEndian32(uint32 num)
 {
@@ -114,8 +129,6 @@ private:
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame
 {
 public:
-    CCoplayConnectionHandler();
-
     virtual void Update(float frametime);
 
     virtual void Shutdown()
@@ -130,16 +143,18 @@ public:
 
     ConnectionRole GetRole(){return Role;}
     void           SetRole(ConnectionRole newrole);
-
+#ifdef COPLAY_USE_LOBBIES
     CSteamID    GetLobby(){return Lobby;}
+#endif
 
-    uint32         msSleepTime;
+    uint32         msSleepTime = 1000/300;
 
 private:
     ConnectionRole      Role = eConnectionRole_UNAVAILABLE;
     HSteamListenSocket  HP2PSocket;
+#ifdef COPLAY_USE_LOBBIES
     CSteamID            Lobby;
-
+#endif
 public:
     CUtlVector<CCoplayConnection*> Connections;
 
@@ -149,9 +164,11 @@ public:
 private:
     STEAM_CALLBACK(CCoplayConnectionHandler, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
     STEAM_CALLBACK(CCoplayConnectionHandler, JoinGame,                GameRichPresenceJoinRequested_t);
+#ifdef COPLAY_USE_LOBBIES
     STEAM_CALLBACK(CCoplayConnectionHandler, LobbyCreated,            LobbyCreated_t);
     STEAM_CALLBACK(CCoplayConnectionHandler, LobbyJoined,             LobbyEnter_t);
     STEAM_CALLBACK(CCoplayConnectionHandler, LobbyJoinRequested,      GameLobbyJoinRequested_t);
+#endif
 };
 extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
 
