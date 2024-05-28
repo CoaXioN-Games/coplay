@@ -47,7 +47,8 @@ ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed 
                         ,(FnChangeCallback_t)ChangeLobbyType // See the enum ELobbyType in isteammatchmaking.h
 #endif
                          );
-ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE, "Number of times to run a connection per second. Only change this if you know what it means.\n", (FnChangeCallback_t)UpdateSleepTime);
+ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE,
+                                  "Number of times to run a connection per second. Only change this if you know what it means.\n", true, 1, false, 0, (FnChangeCallback_t)UpdateSleepTime);
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0, "Prints more information when a socket is opened or closed.\n");
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
