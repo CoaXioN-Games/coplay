@@ -41,13 +41,13 @@ static void ChangeLobbyType()
 ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game?\n"
                          "0  : Invite Only\n"
                          "1  : Steam Friends or Invite\n"
-                         "2  : Public\n",
+                         "2  : Anyone\n",
                         true, 0, true, 2
 #ifdef COPLAY_USE_LOBBIES
                         ,(FnChangeCallback_t)ChangeLobbyType // See the enum ELobbyType in isteammatchmaking.h
 #endif
                          );
-ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE, "Number of times to run a connection per second.\n", (FnChangeCallback_t)UpdateSleepTime);
+ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE, "Number of times to run a connection per second. Only change this if you know what it means.\n", (FnChangeCallback_t)UpdateSleepTime);
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0, "Prints more information when a socket is opened or closed.\n");
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
@@ -188,6 +188,8 @@ void CCoplayConnectionHandler::OpenP2PSocket()
 
 void CCoplayConnectionHandler::CloseP2PSocket()
 {
+    if (GetRole() != eConnectionRole_HOST)
+        return;
     CloseAllConnections();
     SteamNetworkingSockets()->CloseListenSocket(HP2PSocket);
     HP2PSocket = 0;
@@ -209,7 +211,14 @@ void CCoplayConnectionHandler::CloseAllConnections(bool waitforjoin)
 
 CON_COMMAND(coplay_opensocket, "Open p2p listener")
 {
-    g_pCoplayConnectionHandler->OpenP2PSocket();
+    if (g_pCoplayConnectionHandler)
+        g_pCoplayConnectionHandler->OpenP2PSocket();
+}
+
+CON_COMMAND(coplay_closesocket, "Close p2p listener")
+{
+    if (g_pCoplayConnectionHandler)
+        g_pCoplayConnectionHandler->CloseP2PSocket();
 }
 
 CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join you")
