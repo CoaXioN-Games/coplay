@@ -183,7 +183,7 @@ void CCoplayConnectionHandler::OpenP2PSocket()
 
 #ifdef COPLAY_USE_LOBBIES
     ELobbyType lobbytype = (ELobbyType)coplay_joinfilter.GetInt();
-    SteamMatchmaking()->CreateLobby(lobbytype, max(gpGlobals->maxClients, 1));//maxClients is 0 when disconnected (main menu)
+    SteamMatchmaking()->CreateLobby(lobbytype, max(gpGlobals->maxClients, 2));//maxClients is 0 when disconnected (main menu)
 #endif
 }
 
@@ -367,6 +367,7 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
 #ifdef COPLAY_USE_LOBBIES
 void CCoplayConnectionHandler::LobbyCreated(LobbyCreated_t *pParam)
 {
+    SteamMatchmaking()->LeaveLobby(Lobby);//Leave the old lobby if we were in one
     Lobby = pParam->m_ulSteamIDLobby;
 }
 
@@ -386,6 +387,7 @@ void CCoplayConnectionHandler::LobbyJoined(LobbyEnter_t *pParam)
         return; //Don't do anything extra if its ours
 
     SetRole(eConnectionRole_CLIENT);
+    SteamMatchmaking()->LeaveLobby(Lobby);//Leave the old lobby if we were in one
     Lobby = pParam->m_ulSteamIDLobby;
 
     char cmd[64];
@@ -443,7 +445,7 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
 
     if (atoll(args.Arg(1)) <= 0)
     {
-        Msg("Coplay_connect called with 0!\n");
+        Warning("No connect target given.\n");
         return;
     }
 
