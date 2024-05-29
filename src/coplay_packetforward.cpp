@@ -15,6 +15,7 @@
 ConVar coplay_timeoutduration("coplay_timeoutduration", "45", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
+ConVar coplay_forceloopback("coplay_forceloopback", "1", FCVAR_ARCHIVE, "Use the loopback interface for making connections instead of other interfaces. Only change this if you have issues.\n");
 
 ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0", 0, "Prints the number of packets recieved by either interface if more than 0.\n");
 ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
@@ -161,42 +162,53 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     addr.host = 0;
     //addr.host = SwapEndian32(INADDR_LOOPBACK);//SDLNet wants these in network byte order
 
-    IPaddress localaddresses[16];
-    int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
-
-    // this is kind of a mess, from testing using 127.0.0.1 & "net_usesocketsforloopback" doesnt work on windows
-    // and 192.* addresses only work for some people that have only those...
-    for (int i = 0; i < numlocal; i++)
+    ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
+    if (coplay_forceloopback.GetBool())
     {
-        if (localaddresses[i].host == 0)
-            continue;
-        uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-        if (firstoctet == 127 || firstoctet == 172|| firstoctet == 192)
-            continue;
-        addr.host = localaddresses[i].host;
+        addr.host = SwapEndian32(INADDR_LOOPBACK);
+        net_usesocketsforloopback.SetValue("1");
     }
-
-    if (addr.host == 0)
+    else// This else block is only really here because I havent tested the above on enough computers yet
     {
-        Warning("[Coplay Warning] Didn't find a suitable local address! Trying the 192.* range..\n");
+        IPaddress localaddresses[16];
+        int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses)/sizeof(IPaddress));
+
+        // this is kind of a mess, from testing using 192.* addresses only work for some people that have only those...
         for (int i = 0; i < numlocal; i++)
         {
             if (localaddresses[i].host == 0)
                 continue;
             uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-            if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
+            if (firstoctet == 127 || firstoctet == 172|| firstoctet == 192)
                 continue;
             addr.host = localaddresses[i].host;
         }
+
+        if (addr.host == 0)
+        {
+            Warning("[Coplay Warning] Didn't find a suitable local address! Trying the 192.* range..\n");
+            for (int i = 0; i < numlocal; i++)
+            {
+                if (localaddresses[i].host == 0)
+                    continue;
+                uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
+                if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
+                    continue;
+                addr.host = localaddresses[i].host;
+            }
+        }
+        if (addr.host == 0)
+        {
+            Warning("[Coplay Warning] Still didn't find a suitable local address! Trying loopback..\n");
+            addr.host = SwapEndian32(INADDR_LOOPBACK);
+
+            net_usesocketsforloopback.SetValue("1");//I think this has a slight performance penalty so only use if needed
+        }
+        else
+            net_usesocketsforloopback.SetValue("0");
     }
 
-    if (addr.host == 0)
-    {
-        Warning("[Coplay Warning] Still didn't find a suitable local address! Trying loopback..\n");
-        addr.host = SwapEndian32(INADDR_LOOPBACK);
-        ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
-        net_usesocketsforloopback.SetValue("1");
-    }
+
 
     if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
         addr.port = SwapEndian16(27005);
@@ -211,7 +223,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
         //ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %i:%i\n", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->host, SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->port);
     }
     char threadname[32];
-    V_snprintf(threadname, sizeof(threadname), "coplayconnection%i", Port);
+    V_snprintf(threadname, sizeof(threadname), "coplayconnection_%i", Port);
     SetName(threadname);
 }
 

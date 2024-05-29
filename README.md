@@ -1,5 +1,7 @@
 <p align="center"> <img width="500" src="https://coaxion.games/res/coplayLogo.svg"/> </p>
 
+Logo made by FLARE145.
+
 # Coplay
 A MPL2 licensed drop-in Source Engine multiplayer SDK addon that enables the use of the Steam Datagram Relay for P2P connections with support for Linux and Windows.
 
@@ -21,6 +23,7 @@ Ideally, mods implementing Coplay should make their own UI but there are command
 | `coplay_timeoutduration` | How long in seconds to keep a connection around that has no game activity | 45 |
 | `coplay_portrange_begin` *** | Where to start looking for ports to bind on | 3600 |
 | `coplay_portrange_end` *** | Where to stop looking for ports to bind on | 3700 |
+| `coplay_forceloopback` | Uses the loopback interface instead of others, only change this if you have issues | 1 |
 
 \* : Lobbies are only available for mods on Steam.
 \** : Games requiring an invite are not yet implemented for mods that cant support lobbies.

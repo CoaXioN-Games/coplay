@@ -68,6 +68,7 @@ extern ConVar coplay_timeoutduration;
 extern ConVar coplay_connectionthread_hz;
 extern ConVar coplay_portrange_begin;
 extern ConVar coplay_portrange_end;
+extern ConVar coplay_forceloopback;
 
 extern ConVar coplay_debuglog_socketcreation;
 extern ConVar coplay_debuglog_socketspam;
@@ -147,7 +148,7 @@ public:
     CSteamID    GetLobby(){return Lobby;}
 #endif
 
-    uint32         msSleepTime = 1000/300;
+    uint32         msSleepTime = 3;
 
 private:
     ConnectionRole      Role = eConnectionRole_UNAVAILABLE;
