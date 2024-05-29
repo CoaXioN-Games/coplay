@@ -12,7 +12,7 @@
 #include "cbase.h"
 #include "coplay.h"
 
-ConVar coplay_timeoutduration("coplay_timeoutduration", "45", FCVAR_ARCHIVE);
+ConVar coplay_timeoutduration("coplay_timeoutduration", "5", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_forceloopback("coplay_forceloopback", "1", FCVAR_ARCHIVE, "Use the loopback interface for making connections instead of other interfaces. Only change this if you have issues.\n");

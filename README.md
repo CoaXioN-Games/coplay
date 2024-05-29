@@ -20,7 +20,7 @@ Ideally, mods implementing Coplay should make their own UI but there are command
 | Cvar | Description | Default value |
 | :--: | :---------: | :-----------: |
 | `coplay_joinfilter` | Sets who is allowed to join the game. 0: Invite Only, 1: Friends only or Invite, 2: Anyone(Lobby advertised if available)** | 1 |
-| `coplay_timeoutduration` | How long in seconds to keep a connection around that has no game activity | 45 |
+| `coplay_timeoutduration` | How long in seconds to keep a connection around that has no game activity | 5 |
 | `coplay_portrange_begin` *** | Where to start looking for ports to bind on | 3600 |
 | `coplay_portrange_end` *** | Where to stop looking for ports to bind on | 3700 |
 | `coplay_forceloopback` | Uses the loopback interface instead of others, only change this if you have issues | 1 |
