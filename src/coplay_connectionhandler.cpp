@@ -354,12 +354,20 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
 
     case k_ESteamNetworkingConnectionState_Connected:
         if (!CreateSteamConnectionTuple(pParam->m_hConn))
+        {
             SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_PortsFilled, "", NULL);
+#ifdef COPLAY_USE_LOBBIES
+            SteamMatchmaking()->LeaveLobby(Lobby);
+#endif
+        }
 
         break;
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
         SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", NULL);
+#ifdef COPLAY_USE_LOBBIES
+        SteamMatchmaking()->LeaveLobby(Lobby);
+#endif
         break;
     }
 }
