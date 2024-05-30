@@ -236,7 +236,11 @@ CON_COMMAND(coplay_closesocket, "Close p2p listener")
 CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join you")
 {
     if (!g_pCoplayConnectionHandler || g_pCoplayConnectionHandler->GetRole() == eConnectionRole_NOT_CONNECTED)
+    {
         ConColorMsg(COPLAY_MSG_COLOR, "You're not currently in a game joinable by Coplay.\n");
+        return;
+    }
+
     uint64 id;
 #ifdef COPLAY_USE_LOBBIES
         id = g_pCoplayConnectionHandler->GetLobby().ConvertToUint64();
