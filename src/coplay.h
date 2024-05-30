@@ -137,6 +137,12 @@ public:
         CloseAllConnections(true);
     }
 
+    virtual void PostInit()
+    {
+        ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
+        net_usesocketsforloopback.SetValue(true);
+    }
+
     void        OpenP2PSocket();
     void        CloseP2PSocket();
     void        CloseAllConnections(bool waitforjoin = false);

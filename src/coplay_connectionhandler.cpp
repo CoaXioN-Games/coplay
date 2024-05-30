@@ -183,9 +183,9 @@ void CCoplayConnectionHandler::OpenP2PSocket()
         return;
     }
     INetChannelInfo *netinfo = engine->GetNetChannelInfo();
-    if (!netinfo->IsLoopback())
+    if (!(netinfo->IsLoopback() || V_strstr(netinfo->GetAddress(), "127.0.0.1")))
     {
-        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently in a local game.");
+        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently in a local game.%s\n", netinfo->GetAddress());
         return;
     }
     CloseP2PSocket();
@@ -297,20 +297,16 @@ void CCoplayConnectionHandler::SetRole(ConnectionRole newrole)
 {
     ConVarRef sv_lan("sv_lan");
     ConVarRef engine_no_focus_sleep("engine_no_focus_sleep");
-    //ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
     switch (newrole)
     {
     case eConnectionRole_HOST:
         sv_lan.SetValue("1");//sv_lan off will heartbeat the server and allow clients to see our ip
         engine_no_focus_sleep.SetValue("0"); // without this, if the host tabs out everyone lags
-        //net_usesocketsforloopback.SetValue("1");
         break;
     case eConnectionRole_CLIENT:
         engine_no_focus_sleep.SetValue(engine_no_focus_sleep.GetDefault());
-        //net_usesocketsforloopback.SetValue("1");
         break;
     case eConnectionRole_NOT_CONNECTED:
-        //net_usesocketsforloopback.SetValue("0");
         CloseAllConnections();
     }
 

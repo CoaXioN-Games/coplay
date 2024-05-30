@@ -162,11 +162,9 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     addr.host = 0;
     //addr.host = SwapEndian32(INADDR_LOOPBACK);//SDLNet wants these in network byte order
 
-    ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
     if (coplay_forceloopback.GetBool())
     {
         addr.host = SwapEndian32(INADDR_LOOPBACK);
-        net_usesocketsforloopback.SetValue("1");
     }
     else// This else block is only really here because I havent tested the above on enough computers yet
     {
@@ -201,11 +199,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
         {
             Warning("[Coplay Warning] Still didn't find a suitable local address! Trying loopback..\n");
             addr.host = SwapEndian32(INADDR_LOOPBACK);
-
-            net_usesocketsforloopback.SetValue("1");//I think this has a slight performance penalty so only use if needed
         }
-        else
-            net_usesocketsforloopback.SetValue("0");
     }
 
 
