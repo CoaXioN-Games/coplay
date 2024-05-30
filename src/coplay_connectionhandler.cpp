@@ -118,7 +118,7 @@ void CCoplayConnectionHandler::Update(float frametime)
             if (queuedcommand != NULL)
             {
                 ConColorMsg(COPLAY_MSG_COLOR, "%s\n", queuedcommand);
-                engine->ClientCmd(queuedcommand);
+                engine->ClientCmd_Unrestricted(queuedcommand);
                 free(queuedcommand);
             }
         }
@@ -287,7 +287,7 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
         char cmd[64];
         uint32 ipnum = Connections.Tail()->SendbackAddress.host;
         V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], Connections.Tail()->Port);
-        engine->ClientCmd(cmd);
+        engine->ClientCmd_Unrestricted(cmd);
     }
 
     return true;
@@ -413,7 +413,7 @@ void CCoplayConnectionHandler::LobbyJoined(LobbyEnter_t *pParam)
 
     char cmd[64];
     V_snprintf(cmd, sizeof(cmd), "coplay_connect %llu", SteamMatchmaking()->GetLobbyOwner(Lobby).ConvertToUint64());
-    engine->ClientCmd(cmd);//Just use the same code
+    engine->ClientCmd_Unrestricted(cmd);//Just use the same code
 
 }
 
@@ -455,7 +455,7 @@ void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
     char cmd[k_cchMaxRichPresenceValueLength];
     V_strcpy(cmd, pParam->m_rgchConnect);
     V_StrRight(cmd, -1, cmd, sizeof(cmd));// Remove the + at the start
-    engine->ClientCmd(cmd);
+    engine->ClientCmd_Unrestricted(cmd);
 }
 
 
@@ -493,7 +493,7 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
     {
         char cmd[64];
         V_snprintf(cmd, sizeof(cmd), "connect %s", arg );
-        engine->ClientCmd(cmd);
+        engine->ClientCmd_Unrestricted(cmd);
     }
     else // what you're here for
     {
@@ -548,7 +548,7 @@ CON_COMMAND_F(connect_lobby, "", FCVAR_HIDDEN )// Steam appends '+connect_lobby 
 {
     char cmd[128];
     V_snprintf(cmd, sizeof(cmd), "coplay_connect %s", args.ArgS());
-    engine->ClientCmd(cmd);
+    engine->ClientCmd_Unrestricted(cmd);
 
 }
 #endif
