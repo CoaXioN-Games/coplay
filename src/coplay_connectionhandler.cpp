@@ -129,10 +129,10 @@ void CCoplayConnectionHandler::Update(float frametime)
 #ifndef COPLAY_USE_LOBBIES
         if (engine->IsConnected())// Being in a lobby writes this for us
         {
-            INetChannel *pChannel = reinterpret_cast< INetChannel * >(engine->GetNetChannelInfo());
+            INetChannelInfo *netinfo = engine->GetNetChannelInfo();
 
             char szIP[32];
-            if( pChannel->IsLoopback() && HP2PSocket)
+            if( (netinfo->IsLoopback() || V_strstr(netinfo->GetAddress(), "127.0.0.1") ) && HP2PSocket)
             {
                 SteamNetworkingIdentity netID;
                 if (SteamNetworkingSockets()->GetIdentity(&netID))
@@ -145,9 +145,9 @@ void CCoplayConnectionHandler::Update(float frametime)
                     return;
                 }
             }
-            else if( pChannel )
+            else if( netinfo )
             {
-                V_snprintf(szIP, sizeof(szIP), "%s", pChannel->GetAddress());
+                V_snprintf(szIP, sizeof(szIP), "%s", netinfo->GetAddress());
             }
             else
             {
