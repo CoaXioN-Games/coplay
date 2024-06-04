@@ -1,3 +1,4 @@
+
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -550,5 +551,17 @@ CON_COMMAND_F(connect_lobby, "", FCVAR_HIDDEN )// Steam appends '+connect_lobby 
     V_snprintf(cmd, sizeof(cmd), "coplay_connect %s", args.ArgS());
     engine->ClientCmd_Unrestricted(cmd);
 
+}
+
+CON_COMMAND(coplay_invite, "")
+{
+    if (!g_pCoplayConnectionHandler)
+        return;
+    if (g_pCoplayConnectionHandler->GetLobby().ConvertToUint64() == 0)
+    {
+        ConColorMsg(COPLAY_MSG_COLOR, "You aren't in a lobby.\n");
+        return;
+    }
+    SteamFriends()->ActivateGameOverlayInviteDialog(g_pCoplayConnectionHandler->GetLobby());
 }
 #endif
