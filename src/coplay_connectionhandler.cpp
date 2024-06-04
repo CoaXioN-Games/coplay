@@ -41,7 +41,7 @@ static void ChangeLobbyType()
 
 ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game?\n"
                          "0  : Invite Only\n"
-                         "1  : Steam Friends or Invite\n"
+                         "1  : Friends Only\n"
                          "2  : Anyone\n",
                         true, 0, true, 2
 #ifdef COPLAY_USE_LOBBIES
