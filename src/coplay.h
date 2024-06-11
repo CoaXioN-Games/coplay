@@ -27,7 +27,7 @@
 #define COPLAY_MAX_PACKETS 16
 
 
-//For vpcless quick testing
+//For vpcless quick testing, leave this commented when commiting
 //#define COPLAY_USE_LOBBIES
 
 #include <cbase.h>
@@ -39,7 +39,6 @@
 #ifdef COPLAY_USE_LOBBIES
 #include "steam/isteammatchmaking.h"
 #endif
-#ifndef COPLAY_USE_LOBBIES
 enum JoinFilter
 {
     //eP2PFilter_NONE = -1,
@@ -47,6 +46,7 @@ enum JoinFilter
     eP2PFilter_FRIENDS = 1,
     eP2PFilter_EVERYONE = 2,
 };
+#ifndef COPLAY_USE_LOBBIES
 
 #define COPLAY_NETMSG_NEEDPASS "NeedPass"
 #define COPLAY_NETMSG_OK "OK"

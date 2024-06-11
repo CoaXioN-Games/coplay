@@ -33,7 +33,7 @@ int CCoplayConnection::Run()
     int numSteamRecv;
 
     int64 messageOut;
-
+#ifndef COPLAY_USE_LOBBIES
     while(!GameReady && !DeletionQueued)
     {
         if (coplay_debuglog_scream.GetBool())
@@ -59,7 +59,7 @@ int CCoplayConnection::Run()
 
         }
     }
-
+#endif
     if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
     {
         char cmd[64];

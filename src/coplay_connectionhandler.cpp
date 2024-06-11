@@ -234,12 +234,13 @@ void CCoplayConnectionHandler::OpenP2PSocket()
     }
     CloseP2PSocket();
     SetRole(eConnectionRole_HOST);
-    RechoosePassword();
     HP2PSocket =  SteamNetworkingSockets()->CreateListenSocketP2P(0, 0, NULL);
 
 #ifdef COPLAY_USE_LOBBIES
     ELobbyType lobbytype = (ELobbyType)coplay_joinfilter.GetInt();
     SteamMatchmaking()->CreateLobby(lobbytype, max(gpGlobals->maxClients, 2));//maxClients is 0 when disconnected (main menu)
+#else
+    RechoosePassword();
 #endif
 }
 
@@ -298,7 +299,7 @@ CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join
     if (coplay_joinfilter.GetInt() == eP2PFilter_CONTROLLED)
     {
 #ifdef COPLAY_USE_LOBBIES
-ConColorMsg(COPLAY_MSG_COLOR, "You currently have coplay_joinfilter set to invite only, Use coplay_invite\n");
+        ConColorMsg(COPLAY_MSG_COLOR, "You currently have coplay_joinfilter set to invite only, Use coplay_invite\n");
 #else
         ConColorMsg(COPLAY_MSG_COLOR, "\ncoplay_connect %llu %s", id, g_pCoplayConnectionHandler->GetPassword());
 #endif
@@ -599,7 +600,7 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
 #ifdef COPLAY_USE_LOBBIES
         if (steamid.IsLobby())
         {
-            ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting to join lobby with ID %s....\n", arg);
+            ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting to join lobby with ID %s....\n", Id);
             SteamMatchmaking()->JoinLobby(steamid);
             return;
         }
