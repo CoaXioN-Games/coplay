@@ -26,6 +26,7 @@
 
 #define COPLAY_MAX_PACKETS 16
 
+
 //For vpcless quick testing
 //#define COPLAY_USE_LOBBIES
 
@@ -42,10 +43,13 @@
 enum JoinFilter
 {
     //eP2PFilter_NONE = -1,
-    eP2PFilter_INVITEONLY = 0,
+    eP2PFilter_CONTROLLED = 0,//invite or password only
     eP2PFilter_FRIENDS = 1,
     eP2PFilter_EVERYONE = 2,
 };
+
+#define COPLAY_NETMSG_NEEDPASS "NeedPass"
+#define COPLAY_NETMSG_OK "OK"
 #endif
 enum ConnectionRole
 {
@@ -55,12 +59,16 @@ enum ConnectionRole
     eConnectionRole_CLIENT
 };
 
-enum ConnectionEndReason //see the enum ESteamNetConnectionEnd in steamnetworkingtypes.h
+enum ConnectionEndReason // see the enum ESteamNetConnectionEnd in steamnetworkingtypes.h
 {
     k_ESteamNetConnectionEnd_App_NotOpen = 1001,
     k_ESteamNetConnectionEnd_App_ServerFull,
-    k_ESteamNetConnectionEnd_App_PortsFilled, //every port we tried is already bound
+    k_ESteamNetConnectionEnd_App_RemoteIssue,//couldn't open a socket
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
+
+    // incoming connection rejected
+    k_ESteamNetConnectionEnd_App_NotFriend,
+    k_ESteamNetConnectionEnd_App_BadPassword,
 };
 
 extern ConVar coplay_joinfilter;
@@ -112,7 +120,7 @@ class CCoplayConnection : public CThread
     int Run();
 public:
     CCoplayConnection(HSteamNetConnection hConn);
-
+    bool      GameReady;// only check for inital messaging for passwords, if needed, a connecting client cant know for sure
     UDPsocket LocalSocket = NULL;
     uint16    Port = 0;
     IPaddress SendbackAddress;
@@ -152,6 +160,9 @@ public:
     void           SetRole(ConnectionRole newrole);
 #ifdef COPLAY_USE_LOBBIES
     CSteamID    GetLobby(){return Lobby;}
+#else
+    char*     GetPassword(){return Password;}
+    void                RechoosePassword();
 #endif
 
     uint32         msSleepTime = 3;
@@ -161,6 +172,11 @@ private:
     HSteamListenSocket  HP2PSocket;
 #ifdef COPLAY_USE_LOBBIES
     CSteamID            Lobby;
+#else
+public:
+    char                Password[32];
+    CUtlVector<HSteamNetConnection> PendingConnections; // cant connect to the server but has a steam connection to send a password
+
 #endif
 public:
     CUtlVector<CCoplayConnection*> Connections;

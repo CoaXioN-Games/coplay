@@ -128,7 +128,7 @@ void CCoplayConnectionHandler::Update(float frametime)
     if (gpGlobals->realtime > lastSteamRPCUpdate + 1.0f)// Those poor steam servers...
     {
 #ifndef COPLAY_USE_LOBBIES
-        if (engine->IsConnected())// Being in a lobby writes this for us
+        if (engine->IsConnected() && coplay_joinfilter.GetInt() != eP2PFilter_CONTROLLED)// Being in a lobby writes this for us
         {
             INetChannelInfo *netinfo = engine->GetNetChannelInfo();
 
@@ -174,7 +174,50 @@ void CCoplayConnectionHandler::Update(float frametime)
 #endif
         lastSteamRPCUpdate = gpGlobals->realtime;
     }
+
+#ifndef COPLAY_USE_LOBBIES //waiting for password on pending clients
+    for (int i = 0; i < PendingConnections.Count(); i++)
+    {
+        SteamNetworkingMessage_t *InboundSteamMessages;
+        if (!SteamNetworkingSockets()->ReceiveMessagesOnConnection(PendingConnections[i], &InboundSteamMessages, 1))
+            return;
+        char recvPassword[InboundSteamMessages->GetSize()];
+        V_snprintf(recvPassword, InboundSteamMessages->GetSize(), "%s", (const char*)(InboundSteamMessages->GetData()));
+        //Msg("Got password %s\n", recvPassword);
+        if (!V_strcmp(Password, recvPassword))
+        {
+            CreateSteamConnectionTuple(PendingConnections[i]);
+            SteamNetworkingSockets()->SendMessageToConnection(PendingConnections[i], COPLAY_NETMSG_OK, sizeof(COPLAY_NETMSG_OK), 0, NULL);
+            PendingConnections.Remove(i); i--;
+        }
+        else
+        {
+            SteamNetworkingSockets()->CloseConnection(PendingConnections[i], k_ESteamNetConnectionEnd_App_BadPassword, "", true);
+            PendingConnections.Remove(i); i--;
+        }
+    }
+#endif
 }
+#ifndef COPLAY_USE_LOBBIES
+void CCoplayConnectionHandler::RechoosePassword()
+{
+    char validchars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    for (int i = 0; i < sizeof(Password) - 1; i++)
+        Password[i] = validchars[rand() % (sizeof(validchars) -1)];// -1 from size so the terminator isnt included
+    Password[sizeof(Password)-1] = 0;
+}
+
+CON_COMMAND(coplay_rerandomize_password, "Randomizes the password given by coplay_getconnectcommand.\n")
+{
+    if (!g_pCoplayConnectionHandler || g_pCoplayConnectionHandler->GetRole() == eConnectionRole_NOT_CONNECTED)
+    {
+        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently hosting a game.");
+        return;
+    }
+    g_pCoplayConnectionHandler->RechoosePassword();
+}
+
+#endif
 
 void CCoplayConnectionHandler::OpenP2PSocket()
 {
@@ -191,6 +234,7 @@ void CCoplayConnectionHandler::OpenP2PSocket()
     }
     CloseP2PSocket();
     SetRole(eConnectionRole_HOST);
+    RechoosePassword();
     HP2PSocket =  SteamNetworkingSockets()->CreateListenSocketP2P(0, 0, NULL);
 
 #ifdef COPLAY_USE_LOBBIES
@@ -244,13 +288,23 @@ CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join
 
     uint64 id;
 #ifdef COPLAY_USE_LOBBIES
-        id = g_pCoplayConnectionHandler->GetLobby().ConvertToUint64();
+    id = g_pCoplayConnectionHandler->GetLobby().ConvertToUint64();
 #else
-        SteamNetworkingIdentity netID;
-        SteamNetworkingSockets()->GetIdentity(&netID);
-        id = netID.GetSteamID64();
+    SteamNetworkingIdentity netID;
+    SteamNetworkingSockets()->GetIdentity(&netID);
+    id = netID.GetSteamID64();
 #endif
-    ConColorMsg(COPLAY_MSG_COLOR, "\ncoplay_connect %llu\n", id);
+
+    if (coplay_joinfilter.GetInt() == eP2PFilter_CONTROLLED)
+    {
+#ifdef COPLAY_USE_LOBBIES
+ConColorMsg(COPLAY_MSG_COLOR, "You currently have coplay_joinfilter set to invite only, Use coplay_invite\n");
+#else
+        ConColorMsg(COPLAY_MSG_COLOR, "\ncoplay_connect %llu %s", id, g_pCoplayConnectionHandler->GetPassword());
+#endif
+    }
+    else
+        ConColorMsg(COPLAY_MSG_COLOR, "\ncoplay_connect %llu\n", id);
 }
 
 bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
@@ -280,15 +334,6 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
 
         connection->Start();
         Connections.AddToTail(connection);
-    }
-
-
-    if (Role == eConnectionRole_CLIENT)
-    {
-        char cmd[64];
-        uint32 ipnum = Connections.Tail()->SendbackAddress.host;
-        V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], Connections.Tail()->Port);
-        engine->ClientCmd_Unrestricted(cmd);
     }
 
     return true;
@@ -350,12 +395,19 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
             case eP2PFilter_FRIENDS:
                 if (SteamFriends()->HasFriend(ID.GetSteamID(), k_EFriendFlagImmediate))
                     SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
+                else
+                    SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotFriend, "", true);
                 break;
-            case eP2PFilter_INVITEONLY:
-                        //TODO ..
+            case eP2PFilter_CONTROLLED: //This is passwords, we cant get the password before making a connection so dont make a CCoplayConnection until we get it
+                // Connections in PendingConnections are run in CCoplayConnectionHandler::Update() waiting to recieve it
+                    SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
+                    PendingConnections.AddToTail(pParam->m_hConn);
+                break;
+
 
             default:
-                SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", false);
+                SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", true);
+                break;
             }
 
 #endif
@@ -367,9 +419,26 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         break;
 
     case k_ESteamNetworkingConnectionState_Connected:
+#ifndef COPLAY_USE_LOBBIES
+        if (GetRole() == eConnectionRole_HOST)
+        {
+            for (int i = 0; i < PendingConnections.Count(); i++)
+                if (PendingConnections[i] == pParam->m_hConn)
+                {
+                    //send a message that we're expecting a password
+                    SteamNetworkingSockets()->SendMessageToConnection(pParam->m_hConn, COPLAY_NETMSG_NEEDPASS, sizeof(COPLAY_NETMSG_NEEDPASS),
+                                                                      k_nSteamNetworkingSend_Reliable, NULL);
+                    return;
+                }
+
+            SteamNetworkingSockets()->SendMessageToConnection(pParam->m_hConn, COPLAY_NETMSG_OK, sizeof(COPLAY_NETMSG_OK),
+                                                              k_nSteamNetworkingSend_Reliable, NULL);
+        }
+#endif
+
         if (!CreateSteamConnectionTuple(pParam->m_hConn))
         {
-            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_PortsFilled, "", NULL);
+            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "", true);
 #ifdef COPLAY_USE_LOBBIES
             SteamMatchmaking()->LeaveLobby(Lobby);
 #endif
@@ -378,9 +447,16 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         break;
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", NULL);
+        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", true);
 #ifdef COPLAY_USE_LOBBIES
         SteamMatchmaking()->LeaveLobby(Lobby);
+#else
+        for (int i = 0; i < PendingConnections.Count(); i++)
+            if (PendingConnections[i] == pParam->m_hConn)
+            {
+                PendingConnections.Remove(i);
+                return;
+            }
 #endif
         break;
     }
@@ -484,16 +560,20 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
         return;
     }
 
-    char arg[64];
-    V_snprintf(arg, sizeof(arg), "%s", args.Arg(1));
+    char Id[64];
+    V_snprintf(Id, sizeof(Id), "%s", args.Arg(1));
+#ifndef COPLAY_USE_LOBBIES
+    //Store it here for when we might need to send it later
+    V_snprintf(g_pCoplayConnectionHandler->Password, sizeof(g_pCoplayConnectionHandler->Password), "%s", args.Arg(2));
+#endif
 
     g_pCoplayConnectionHandler->CloseAllConnections();
     g_pCoplayConnectionHandler->SetRole(eConnectionRole_CLIENT);
 
-    if (V_strstr(arg, "."))//normal server, probably
+    if (V_strstr(Id, "."))//normal server, probably
     {
         char cmd[64];
-        V_snprintf(cmd, sizeof(cmd), "connect %s", arg );
+        V_snprintf(cmd, sizeof(cmd), "connect %s", Id );
         engine->ClientCmd_Unrestricted(cmd);
     }
     else // what you're here for
@@ -515,7 +595,7 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
             return;
         }
         CSteamID steamid;
-        steamid.SetFromUint64(atoll(arg));
+        steamid.SetFromUint64(atoll(Id));
 #ifdef COPLAY_USE_LOBBIES
         if (steamid.IsLobby())
         {
@@ -534,9 +614,11 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
             }
 #endif
             SteamNetworkingIdentity netID;
-            netID.SetSteamID64(atoll(arg));
+            netID.SetSteamID64(atoll(Id));
+
             SteamNetworkingConfigValue_t options[1];
             options[0].SetInt32(k_ESteamNetworkingConfig_EnableDiagnosticsUI, 1);
+
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
             SteamNetworkingSockets()->ConnectP2P(netID, 0, sizeof(options)/sizeof(SteamNetworkingConfigValue_t), options);
             return;
@@ -564,4 +646,8 @@ CON_COMMAND(coplay_invite, "")
     }
     SteamFriends()->ActivateGameOverlayInviteDialog(g_pCoplayConnectionHandler->GetLobby());
 }
+#else
+
+
+
 #endif

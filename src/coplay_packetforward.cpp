@@ -21,7 +21,7 @@ ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0", 0, "Prints 
 ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
 
 int CCoplayConnection::Run()
-{
+{   
     UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS + 1, 1500);//normal ethernet MTU size
     LocalInboundPackets[COPLAY_MAX_PACKETS - 1 ] = NULL;
 
@@ -33,10 +33,45 @@ int CCoplayConnection::Run()
     int numSteamRecv;
 
     int64 messageOut;
+
+    while(!GameReady && !DeletionQueued)
+    {
+        if (coplay_debuglog_scream.GetBool())
+            Msg("Waiting for Server response..\n");
+        ThreadSleep(50);
+        numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
+        for(uint i =0; i < numSteamRecv; i++)
+        {
+
+            char recvMsg[InboundSteamMessages[i]->GetSize()];
+            V_snprintf(recvMsg, InboundSteamMessages[i]->GetSize(), "%s", (const char*)(InboundSteamMessages[i]->GetData()));
+            if (!V_strcmp(COPLAY_NETMSG_NEEDPASS, recvMsg))
+            {
+                //Msg("Sending Password %s...\n",g_pCoplayConnectionHandler->Password);
+                SteamNetworkingSockets()->SendMessageToConnection(SteamConnection,
+                                                                  g_pCoplayConnectionHandler->Password, sizeof(g_pCoplayConnectionHandler->Password),
+                                                                  0, &messageOut);
+            }
+            else if (!V_strcmp(COPLAY_NETMSG_OK, recvMsg))
+                GameReady = true;//Good to start relaying packets
+            else
+                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay] Got unexpected handshake message, \"%s\"\n", recvMsg);
+
+        }
+    }
+
+    if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
+    {
+        char cmd[64];
+        uint32 ipnum = SendbackAddress.host;
+        V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], Port);
+        engine->ClientCmd_Unrestricted(cmd);
+    }
+
     while(!DeletionQueued)
     {
         if (coplay_debuglog_scream.GetBool())
-            Msg("A!!!!!!!!!!!!");
+            Msg("LOOP START ");
         if (LocalSocket == NULL ||  SteamConnection == 0)
         {
             Warning("[Coplay Warning] A registered Coplay socket was invalid! Deleting.\n");
@@ -51,11 +86,11 @@ int CCoplayConnection::Run()
 
         //Outbound to SDR
         if (coplay_debuglog_scream.GetBool())
-            Msg("B!!!!!!!!!!!!!");
+            Msg("OUTBOUND START");
         numSDLRecv = SDLNet_UDP_RecvV(LocalSocket, LocalInboundPackets);
         //numSDLRecv = SDLNet_UDP_Recv(LocalSocket, LocalInboundPackets[0]);
         if (coplay_debuglog_scream.GetBool())
-            Msg("c.\n");
+            Msg("OUTBOUND END\n");
 
         if( numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
@@ -137,6 +172,10 @@ void CCoplayConnection::OnExit()
 
 CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
 {
+    if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_HOST)
+        GameReady = true;// Server side always knows if this is ready to go
+    else
+        GameReady = false;
     SteamConnection = hConn;
     LastPacketTime = gpGlobals->realtime;
 
