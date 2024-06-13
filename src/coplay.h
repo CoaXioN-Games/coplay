@@ -39,10 +39,19 @@
 #ifdef COPLAY_USE_LOBBIES
 #include "steam/isteammatchmaking.h"
 #endif
+
+
+#include "tier0/valve_minmax_off.h"	// GCC 4.2.2 headers screw up our min/max defs.
+#include <string>
+#include "tier0/valve_minmax_on.h"
+
 enum JoinFilter
 {
     //eP2PFilter_NONE = -1,
-    eP2PFilter_CONTROLLED = 0,//invite or password only
+    eP2PFilter_CONTROLLED = 0,// requires a password appended to coplay_connect to make a connection
+                              // given by the host running coplay_getconnectcommand
+                              // passwords are not user settable and are randomized every socket open or
+                              // when running coplay_rerandomize_password
     eP2PFilter_FRIENDS = 1,
     eP2PFilter_EVERYONE = 2,
 };
@@ -103,7 +112,7 @@ static uint16 SwapEndian16(uint16 num)
     newnum[1] = ((byte*)&num)[0];
     return *((uint16*)newnum);
 }
-
+#ifdef COPLAY_USE_LOBBIES
 static bool IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
 {
     uint32 numMembers = SteamMatchmaking()->GetNumLobbyMembers(LobbyID);
@@ -114,20 +123,23 @@ static bool IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
     }
     return false;
 }
-
+#endif
+//a single SDL/Steam connection pair, clients will only have 0 or 1 of these, one per remote player on the host
 class CCoplayConnection : public CThread
 {
     int Run();
 public:
     CCoplayConnection(HSteamNetConnection hConn);
+
     bool      GameReady;// only check for inital messaging for passwords, if needed, a connecting client cant know for sure
     UDPsocket LocalSocket = NULL;
     uint16    Port = 0;
     IPaddress SendbackAddress;
-    HSteamNetConnection    SteamConnection = 0;
+
+    HSteamNetConnection     SteamConnection = 0;
+    float                   TimeStarted;
 
     void QueueForDeletion(){DeletionQueued = true;}
-    virtual void OnExit();
 
 private:
     bool DeletionQueued = false;
@@ -135,6 +147,14 @@ private:
     float LastPacketTime = 0;//This is for when the steam connection is still being kept alive but there is no actual activity
 };
 
+struct PendingConnection// for when we make a steam connection to ask for a password but
+                        // not letting it send packets to the game server yet
+{
+    HSteamNetConnection SteamConnection = 0;
+    float               TimeCreated = 0;
+};
+
+//Handles all the Steam callbacks and connection management
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame
 {
 public:
@@ -161,7 +181,7 @@ public:
 #ifdef COPLAY_USE_LOBBIES
     CSteamID    GetLobby(){return Lobby;}
 #else
-    char*     GetPassword(){return Password;}
+    std::string         GetPassword(){return Password;}
     void                RechoosePassword();
 #endif
 
@@ -174,8 +194,8 @@ private:
     CSteamID            Lobby;
 #else
 public:
-    char                Password[32];
-    CUtlVector<HSteamNetConnection> PendingConnections; // cant connect to the server but has a steam connection to send a password
+    std::string                Password;// we use this same variable for a password we need to send if we're the client, or the one we need to check agaisnt if we're the server
+    CUtlVector<PendingConnection> PendingConnections; // cant connect to the server but has a steam connection to send a password
 
 #endif
 public:

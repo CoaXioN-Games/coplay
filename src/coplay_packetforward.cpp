@@ -12,7 +12,7 @@
 #include "cbase.h"
 #include "coplay.h"
 
-ConVar coplay_timeoutduration("coplay_timeoutduration", "5", FCVAR_ARCHIVE);
+ConVar coplay_timeoutduration("coplay_timeoutduration", "15", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_forceloopback("coplay_forceloopback", "1", FCVAR_ARCHIVE, "Use the loopback interface for making connections instead of other interfaces. Only change this if you have issues.\n");
@@ -22,11 +22,10 @@ ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the co
 
 int CCoplayConnection::Run()
 {   
-    UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS + 1, 1500);//normal ethernet MTU size
-    LocalInboundPackets[COPLAY_MAX_PACKETS - 1 ] = NULL;
+    TimeStarted = gpGlobals->realtime;
+    UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS, 1500);//probably big enough
 
     SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];
-    //UDPpacket *SteamPacket = SDLNet_AllocPacket(1);// we dont actually use the buffer of this one
     UDPpacket SteamPacket;
 
     int numSDLRecv;
@@ -34,34 +33,35 @@ int CCoplayConnection::Run()
 
     int64 messageOut;
 #ifndef COPLAY_USE_LOBBIES
-    while(!GameReady && !DeletionQueued)
+    // see if the server needs a password and wait till we're told we will be let in to start forwarding stuff
+    while(!GameReady && !DeletionQueued && TimeStarted + coplay_timeoutduration.GetFloat() > gpGlobals->curtime)
     {
         if (coplay_debuglog_scream.GetBool())
             Msg("Waiting for Server response..\n");
         ThreadSleep(50);
         numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
-        for(uint i =0; i < numSteamRecv; i++)
+        for(int i =0; i < numSteamRecv; i++)
         {
 
-            char recvMsg[InboundSteamMessages[i]->GetSize()];
-            V_snprintf(recvMsg, InboundSteamMessages[i]->GetSize(), "%s", (const char*)(InboundSteamMessages[i]->GetData()));
-            if (!V_strcmp(COPLAY_NETMSG_NEEDPASS, recvMsg))
+            std::string recvMsg((const char*)(InboundSteamMessages[i]->GetData()));
+            if (recvMsg == std::string(COPLAY_NETMSG_NEEDPASS))
             {
                 //Msg("Sending Password %s...\n",g_pCoplayConnectionHandler->Password);
                 SteamNetworkingSockets()->SendMessageToConnection(SteamConnection,
-                                                                  g_pCoplayConnectionHandler->Password, sizeof(g_pCoplayConnectionHandler->Password),
-                                                                  0, &messageOut);
+                                                                  g_pCoplayConnectionHandler->Password.c_str(), g_pCoplayConnectionHandler->Password.length(),
+                                                                  k_nSteamNetworkingSend_ReliableNoNagle | k_nSteamNetworkingSend_UseCurrentThread, &messageOut);
             }
-            else if (!V_strcmp(COPLAY_NETMSG_OK, recvMsg))
-                GameReady = true;//Good to start relaying packets
+            else if (recvMsg == std::string(COPLAY_NETMSG_OK))
+                GameReady = true;//Server said our password was good, start relaying packets
             else
-                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay] Got unexpected handshake message, \"%s\"\n", recvMsg);
-
+                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay] Got unexpected handshake message, \"%s\"\n", recvMsg.c_str());
         }
     }
+
 #endif
-    if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
+    if (!DeletionQueued && g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
     {
+        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
         char cmd[64];
         uint32 ipnum = SendbackAddress.host;
         V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], Port);
@@ -101,20 +101,17 @@ int CCoplayConnection::Run()
 
         for (uint8 j = 0; j < numSDLRecv; j++)
         {
-            // OutboundSteamMessages[j] = SteamNetworkingUtils()->AllocateMessage(LocalInboundPackets[j]->len);
-            // OutboundSteamMessages[j]->m_identityPeer
-            //EResult result =
             SteamNetworkingSockets()->SendMessageToConnection(SteamConnection, (const void*)LocalInboundPackets[j]->data,
                                                                             LocalInboundPackets[j]->len,
                                                                             k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
-                                                                            &messageOut);
+                                                                            &messageOut);//use unreliable mode, source already handles it, dont do double duty for no reason
             //if (coplay_debuglog_socketspam.GetBool())
             //    ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Result %i\n", result);
         }
 
         //Inbound from SDR
 
-        numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, sizeof(InboundSteamMessages));
+        numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, COPLAY_MAX_PACKETS);
 
         if (numSteamRecv > 0 && coplay_debuglog_socketspam.GetBool())
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
@@ -141,6 +138,12 @@ int CCoplayConnection::Run()
     //Cleanup
 
     SDLNet_FreePacketV(LocalInboundPackets);
+    SDLNet_UDP_Close(LocalSocket);
+    SteamNetworkingSockets()->CloseConnection(SteamConnection, k_ESteamNetConnectionEnd_App_ClosedByPeer, "", false);
+    g_pCoplayConnectionHandler->Connections.FindAndRemove(this);
+
+    if (coplay_debuglog_socketcreation.GetBool())
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket closed with port %i.\n", Port);
     return 0;
 }
 
@@ -151,23 +154,13 @@ CON_COMMAND_F(coplay_debug_senddummy_steam, "", FCVAR_CLIENTDLL)
         CCoplayConnection* con = g_pCoplayConnectionHandler->Connections[i];
         if (!con)
             continue;
-        char string[40] = "Completely Random Test String (tm)";
+        char string[] = "Completely Random Test String (tm)";
         int64 msgout;
         SteamNetworkingSockets()->SendMessageToConnection(con->SteamConnection, string, sizeof(string),
                                                           k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
                                                           &msgout);
 
     }
-}
-
-void CCoplayConnection::OnExit()
-{
-    SDLNet_UDP_Close(LocalSocket);
-    SteamNetworkingSockets()->CloseConnection(SteamConnection, k_ESteamNetConnectionEnd_App_ClosedByPeer, "", false);
-    g_pCoplayConnectionHandler->Connections.FindAndRemove(this);
-
-    if (coplay_debuglog_socketcreation.GetBool())
-        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket closed with port %i.\n", Port);
 }
 
 CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
@@ -255,9 +248,8 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %u\n", Port);
         //ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] New socket : %i:%i\n", SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->host, SDLNet_UDP_GetPeerAddress(tuple->LocalSocket, 0)->port);
     }
-    char threadname[32];
-    V_snprintf(threadname, sizeof(threadname), "coplayconnection_%i", Port);
-    SetName(threadname);
+    std::string threadname = "coplayconnection_" + std::to_string(Port);
+    SetName(threadname.c_str());
 }
 
 CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
