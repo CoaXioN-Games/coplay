@@ -47,7 +47,7 @@
 
 enum JoinFilter
 {
-    //eP2PFilter_NONE = -1,
+    eP2PFilter_OFF = -1,
     eP2PFilter_CONTROLLED = 0,// requires a password appended to coplay_connect to make a connection
                               // given by the host running coplay_getconnectcommand
                               // passwords are not user settable and are randomized every socket open or
@@ -62,7 +62,7 @@ enum JoinFilter
 #endif
 enum ConnectionRole
 {
-    eConnectionRole_UNAVAILABLE = -1,
+    eConnectionRole_UNAVAILABLE = -1,// Waiting on Steam
     eConnectionRole_NOT_CONNECTED = 0,
     eConnectionRole_HOST,
     eConnectionRole_CLIENT
@@ -170,6 +170,9 @@ public:
         ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");
         net_usesocketsforloopback.SetValue(true);
     }
+
+    virtual void LevelInitPostEntity();
+    virtual void LevelShutdownPostEntity();
 
     void        OpenP2PSocket();
     void        CloseP2PSocket();

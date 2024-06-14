@@ -35,11 +35,12 @@ static void ChangeLobbyType()
 }
 #endif
 
-ConVar coplay_joinfilter("coplay_joinfilter", "1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game?\n"
-                         "0  : Invite Only\n"
-                         "1  : Friends Only\n"
-                         "2  : Anyone\n",
-                        true, 0, true, 2
+ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game?\n"
+                        "-1 : Coplay Off"
+                        "0  : Invite Only\n"
+                        "1  : Friends Only\n"
+                        "2  : Anyone\n",
+                        true, -1, true, 2
 #ifdef COPLAY_USE_LOBBIES
                         ,(FnChangeCallback_t)ChangeLobbyType // See the enum ELobbyType in isteammatchmaking.h
 #endif
@@ -97,6 +98,7 @@ public:
     }
 }coplaybootstrap;
 
+
 void CCoplayConnectionHandler::Update(float frametime)
 {
     static bool checkavail = true;
@@ -124,7 +126,7 @@ void CCoplayConnectionHandler::Update(float frametime)
     if (gpGlobals->realtime > lastSteamRPCUpdate + 1.0f)// Those poor steam servers...
     {
 #ifndef COPLAY_USE_LOBBIES
-        if (engine->IsConnected() && coplay_joinfilter.GetInt() != eP2PFilter_CONTROLLED)// Being in a lobby writes this for us
+        if (engine->IsConnected() && coplay_joinfilter.GetInt() != eP2PFilter_CONTROLLED)// Being in a lobby sets the connect string automatically
         {
             INetChannelInfo *netinfo = engine->GetNetChannelInfo();
 
@@ -205,13 +207,38 @@ void CCoplayConnectionHandler::Update(float frametime)
     }
 #endif
 }
+
+
+void CCoplayConnectionHandler::LevelInitPostEntity()//Open p2p automatically
+{
+    if (GetRole() != eConnectionRole_NOT_CONNECTED || coplay_joinfilter.GetInt() == eP2PFilter_OFF)
+        return;
+
+    INetChannelInfo *netinfo = engine->GetNetChannelInfo();
+    std::string ip = netinfo->GetAddress();
+    if (!(netinfo->IsLoopback() || ip.find("127") == 0))// check its our game and not a dedicated
+        return;
+
+    OpenP2PSocket();
+}
+
+void CCoplayConnectionHandler::LevelShutdownPostEntity()
+{
+    if (!engine->IsConnected())//server disconnect/shutdown
+    {
+        CloseAllConnections();
+        SetRole(eConnectionRole_NOT_CONNECTED);
+    }
+
+}
+
 #ifndef COPLAY_USE_LOBBIES
 void CCoplayConnectionHandler::RechoosePassword()
 {
-    static const char validchars[] = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    static const std::string validchars= "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     Password.clear();
     for (int i = 0; i < 32; i++)
-         Password += validchars[rand() % (sizeof(validchars) - 1)];
+         Password += validchars[rand() % validchars.length()];
 }
 
 CON_COMMAND(coplay_rerandomize_password, "Randomizes the password given by coplay_getconnectcommand.\n")
@@ -234,7 +261,8 @@ void CCoplayConnectionHandler::OpenP2PSocket()
         return;
     }
     INetChannelInfo *netinfo = engine->GetNetChannelInfo();
-    if (!(netinfo->IsLoopback() || V_strstr(netinfo->GetAddress(), "127.0.0.1")))
+    std::string ip = netinfo->GetAddress();
+    if (!(netinfo->IsLoopback() || ip.find("127") == 0))
     {
         ConColorMsg(COPLAY_MSG_COLOR, "You're not currently in a local game.%s\n", netinfo->GetAddress());
         return;
@@ -276,7 +304,7 @@ void CCoplayConnectionHandler::CloseAllConnections(bool waitforjoin)
             Connections[i]->Join();
 }
 
-CON_COMMAND(coplay_opensocket, "Open p2p listener")
+CON_COMMAND(coplay_opensocket, "Manually (re)open your game to P2P connections")
 {
     if (g_pCoplayConnectionHandler)
         g_pCoplayConnectionHandler->OpenP2PSocket();
@@ -581,8 +609,8 @@ void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
     engine->ClientCmd_Unrestricted(cmd.c_str());
     return;
 badinput:
-    ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Warning] %s Was given a bad/invalid/empty command!"
-                                        "Make sure both parties are updated and that you trust the host you're trying to connect to.\n", __func__);
+    ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Warning] CCoplayConnectionHandler::JoinGame() Was given a bad/invalid/empty command ( %s )!"
+                                        "Make sure both parties are updated and that you trust the host you're trying to connect to.\n", cmd.c_str());
 }
 
 
