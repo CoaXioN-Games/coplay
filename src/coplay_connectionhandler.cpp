@@ -63,6 +63,7 @@ class CCoplaySteamBootstrap : public CAutoGameSystem
 public:
     virtual bool Init()
     {
+        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Initialization started...\n");
     #ifdef GAME_DLL //may support dedicated servers at some point
         if (!engine->IsDedicatedServer())
         {
@@ -83,12 +84,13 @@ public:
         }
         if (!SteamAPI_Init())
         {
-            Error("Steam API Failed to Init! (%s::%i)\n", __FILE__, __LINE__);
-            return false;
+            //Error("Steam API Failed to Init! (%s::%i)\n", __FILE__, __LINE__);
+            Warning("[Coplay] Steam Offline, Coplay disabled.\n");
+            return true;
         }
         SteamNetworkingUtils()->InitRelayNetworkAccess();
 
-        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Initialization started...\n");
+
         g_pCoplayConnectionHandler = new CCoplayConnectionHandler;
         return true;
     }
@@ -228,6 +230,7 @@ void CCoplayConnectionHandler::LevelShutdownPostEntity()
     {
         CloseAllConnections();
         SetRole(eConnectionRole_NOT_CONNECTED);
+
     }
 
 }
@@ -490,7 +493,8 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         {
             SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "", true);
 #ifdef COPLAY_USE_LOBBIES
-            SteamMatchmaking()->LeaveLobby(Lobby);
+            if (GetRole() != eConnectionRole_HOST)
+                SteamMatchmaking()->LeaveLobby(Lobby);
 #endif
         }
 
@@ -502,7 +506,8 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
     case k_ESteamNetworkingConnectionState_ClosedByPeer:
 
 #ifdef COPLAY_USE_LOBBIES
-        SteamMatchmaking()->LeaveLobby(Lobby);
+        if (GetRole() != eConnectionRole_HOST)
+            SteamMatchmaking()->LeaveLobby(Lobby);
 #else
         for (int i = 0; i < PendingConnections.Count(); i++)
         {
