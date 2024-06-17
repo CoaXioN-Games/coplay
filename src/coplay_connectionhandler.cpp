@@ -30,13 +30,15 @@ static void UpdateSleepTime()
 #ifdef COPLAY_USE_LOBBIES
 static void ChangeLobbyType()
 {
+    int filter = coplay_joinfilter.GetInt();
     if (g_pCoplayConnectionHandler && g_pCoplayConnectionHandler->GetLobby().IsLobby() && g_pCoplayConnectionHandler->GetLobby().IsValid())
-        SteamMatchmaking()->SetLobbyType(g_pCoplayConnectionHandler->GetLobby(), (ELobbyType)coplay_joinfilter.GetInt());
+        SteamMatchmaking()->SetLobbyType(g_pCoplayConnectionHandler->GetLobby(),
+                                         (ELobbyType)( filter > -1 ? filter : 0));
 }
 #endif
 
-ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game?\n"
-                        "-1 : Coplay Off"
+ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game? Will also call coplay_opensocket on server start if set above -1.\n"
+                        "-1 : Off"
                         "0  : Invite Only\n"
                         "1  : Friends Only\n"
                         "2  : Anyone\n",
@@ -277,7 +279,8 @@ void CCoplayConnectionHandler::OpenP2PSocket()
 
 #ifdef COPLAY_USE_LOBBIES
     SteamMatchmaking()->LeaveLobby(Lobby);
-    ELobbyType lobbytype = (ELobbyType)coplay_joinfilter.GetInt();
+    int filter = coplay_joinfilter.GetInt();
+    ELobbyType lobbytype = (ELobbyType)( filter > -1 ? filter : 0);
     SteamMatchmaking()->CreateLobby(lobbytype, gpGlobals->maxClients);
 #else
     RechoosePassword();
