@@ -134,8 +134,8 @@ void CCoplayConnectionHandler::Update(float frametime)
         {
             INetChannelInfo *netinfo = engine->GetNetChannelInfo();
 
-            std::string IP;
-            if( (netinfo->IsLoopback() || V_strstr(netinfo->GetAddress(), "127.0.0.1") ) && HP2PSocket)
+            std::string IP = netinfo->GetAddress();
+            if( (netinfo->IsLoopback() || IP.find("127") == 0 ) && HP2PSocket)
             {
                 SteamNetworkingIdentity netID;
                 if (SteamNetworkingSockets()->GetIdentity(&netID))
