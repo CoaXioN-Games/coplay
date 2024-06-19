@@ -283,7 +283,6 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
             std::string portstr = ip.substr(ip.find(':') + 1, std::string::npos);
             int port = std::stoi(portstr);
             addr.port = SwapEndian16(port);
-            Msg("%i", port);
         }
     }
     SDLNet_UDP_Bind(LocalSocket, 1, &addr);// "Inbound" Channel

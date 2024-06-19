@@ -38,7 +38,7 @@ static void ChangeLobbyType()
 #endif
 
 ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game? Will also call coplay_opensocket on server start if set above -1.\n"
-                        "-1 : Off"
+                        "-1 : Off\n"
                         "0  : Invite Only\n"
                         "1  : Friends Only\n"
                         "2  : Anyone\n",
