@@ -62,10 +62,11 @@ int CCoplayConnection::Run()
     if (!DeletionQueued && g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
     {
         ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
-        char cmd[64];
+        std::string cmd;
         uint32 ipnum = SendbackAddress.host;
-        V_snprintf(cmd, sizeof(cmd), "connect %i.%i.%i.%i:%i", ((uint8*)&ipnum)[0], ((uint8*)&ipnum)[1], ((uint8*)&ipnum)[2], ((uint8*)&ipnum)[3], Port);
-        engine->ClientCmd_Unrestricted(cmd);
+        cmd = "connect " + std::to_string(((uint8*)&ipnum)[0]) + '.' + std::to_string(((uint8*)&ipnum)[1]) + '.' +
+                std::to_string(((uint8*)&ipnum)[2]) + '.' + std::to_string(((uint8*)&ipnum)[3]) + ':' + std::to_string(Port);
+        engine->ClientCmd_Unrestricted(cmd.c_str());
     }
 
     while(!DeletionQueued)
