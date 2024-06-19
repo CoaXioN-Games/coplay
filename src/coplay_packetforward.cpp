@@ -11,6 +11,8 @@
 
 #include "cbase.h"
 #include "coplay.h"
+#include <inetchannel.h>
+#include <inetchannelinfo.h>
 
 ConVar coplay_timeoutduration("coplay_timeoutduration", "15", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
@@ -20,10 +22,12 @@ ConVar coplay_forceloopback("coplay_forceloopback", "1", FCVAR_ARCHIVE, "Use the
 ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0", 0, "Prints the number of packets recieved by either interface if more than 0.\n");
 ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
 
+
 int CCoplayConnection::Run()
 {   
+    ConVarRef net_maxroutable("net_maxroutable");
     TimeStarted = gpGlobals->realtime;
-    UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS, 1500);//probably big enough
+    UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS, net_maxroutable.GetInt());
 
     SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];
     UDPpacket SteamPacket;
@@ -72,7 +76,9 @@ int CCoplayConnection::Run()
     while(!DeletionQueued)
     {
         if (coplay_debuglog_scream.GetBool())
+        {
             Msg("LOOP START ");
+        }
         if (LocalSocket == NULL ||  SteamConnection == 0)
         {
             Warning("[Coplay Warning] A registered Coplay socket was invalid! Deleting.\n");
@@ -81,23 +87,33 @@ int CCoplayConnection::Run()
         }
 
         if (coplay_debuglog_scream.GetBool())
+        {
             Msg("Sleep %ims", g_pCoplayConnectionHandler->msSleepTime);
+        }
         ThreadSleep(g_pCoplayConnectionHandler->msSleepTime);//dont work too hard
 
 
         //Outbound to SDR
         if (coplay_debuglog_scream.GetBool())
+        {
             Msg("OUTBOUND START");
+        }
         numSDLRecv = SDLNet_UDP_RecvV(LocalSocket, LocalInboundPackets);
         //numSDLRecv = SDLNet_UDP_Recv(LocalSocket, LocalInboundPackets[0]);
         if (coplay_debuglog_scream.GetBool())
+        {
             Msg("OUTBOUND END\n");
+        }
 
         if( numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
+        {
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL %i\n", numSDLRecv);
+        }
 
         if (numSDLRecv == -1)
+        {
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
+        }
 
 
         for (uint8 j = 0; j < numSDLRecv; j++)
@@ -115,10 +131,14 @@ int CCoplayConnection::Run()
         numSteamRecv = SteamNetworkingSockets()->ReceiveMessagesOnConnection(SteamConnection, InboundSteamMessages, COPLAY_MAX_PACKETS);
 
         if (numSteamRecv > 0 && coplay_debuglog_socketspam.GetBool())
+        {
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam %i\n", numSteamRecv);
+        }
 
         if (numSteamRecv > 0 || engine->IsConnected())
+        {
             LastPacketTime = gpGlobals->realtime;
+        }
 
 
         for (uint8 j = 0; j < numSteamRecv; j++)
@@ -127,14 +147,20 @@ int CCoplayConnection::Run()
             SteamPacket.len  = InboundSteamMessages[j]->GetSize();
 
             if (!SDLNet_UDP_Send(LocalSocket, 1, &SteamPacket))
+            {
                 ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Wasnt sent! %s\n", SDLNet_GetError());
+            }
         }
 
         for (uint8 j = 0; j < numSteamRecv; j++)
+        {
             InboundSteamMessages[j]->Release();
+        }
 
         if (LastPacketTime + coplay_timeoutduration.GetFloat() < gpGlobals->realtime)
+        {
             QueueForDeletion();
+        }
     }
     //Cleanup
 
@@ -144,7 +170,9 @@ int CCoplayConnection::Run()
     g_pCoplayConnectionHandler->Connections.FindAndRemove(this);
 
     if (coplay_debuglog_socketcreation.GetBool())
+    {
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket closed with port %i.\n", Port);
+    }
     return 0;
 }
 
@@ -238,9 +266,26 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
 
 
     if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
-        addr.port = SwapEndian16(27005);
+    {
+        ConVarRef clientport("clientport");
+        addr.port = SwapEndian16(clientport.GetInt());
+    }
     else
-        addr.port = SwapEndian16(27015);// default server port, check for this proper later
+    {
+        INetChannelInfo *netinfo = engine->GetNetChannelInfo();
+        std::string ip = netinfo->GetAddress();
+        if ( ip.find(':') == std::string::npos || ip.length() - 1 == ip.find(':'))
+        {
+            addr.port = SwapEndian16(27015);
+        }
+        else
+        {
+            std::string portstr = ip.substr(ip.find(':') + 1, std::string::npos);
+            int port = std::stoi(portstr);
+            addr.port = SwapEndian16(port);
+            Msg("%i", port);
+        }
+    }
     SDLNet_UDP_Bind(LocalSocket, 1, &addr);// "Inbound" Channel
     SendbackAddress = addr;
 

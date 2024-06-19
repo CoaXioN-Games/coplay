@@ -175,7 +175,7 @@ public:
     }
 
     virtual void LevelInitPostEntity();
-    virtual void LevelShutdownPostEntity();
+    virtual void LevelShutdownPreEntity();
 
     void        OpenP2PSocket();
     void        CloseP2PSocket();

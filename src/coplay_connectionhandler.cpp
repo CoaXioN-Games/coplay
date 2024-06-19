@@ -226,13 +226,12 @@ void CCoplayConnectionHandler::LevelInitPostEntity()//Open p2p automatically
     OpenP2PSocket();
 }
 
-void CCoplayConnectionHandler::LevelShutdownPostEntity()
+void CCoplayConnectionHandler::LevelShutdownPreEntity()
 {
     if (!engine->IsConnected())//server disconnect/shutdown
     {
         CloseAllConnections();
         SetRole(eConnectionRole_NOT_CONNECTED);
-
     }
 
 }
@@ -357,7 +356,6 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
     if (!SteamNetworkingSockets()->GetConnectionInfo(hConn, &newinfo))
         return false;
 
-    bool alreadyconnected = false;
     for (int i = 0; i< Connections.Count(); i++)
     {
         SteamNetConnectionInfo_t info;
@@ -365,20 +363,18 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
         {
             if (info.m_identityRemote.GetSteamID64() == newinfo.m_identityRemote.GetSteamID64())
             {
-                Connections[i]->SteamConnection = hConn;
-                alreadyconnected = true;
+                Connections[i]->QueueForDeletion();
                 break;
             }
         }
     }
 
-    if (!alreadyconnected)
-    {
-        CCoplayConnection *connection = new CCoplayConnection(hConn);
 
-        connection->Start();
-        Connections.AddToTail(connection);
-    }
+    CCoplayConnection *connection = new CCoplayConnection(hConn);
+
+    connection->Start();
+    Connections.AddToTail(connection);
+
 
     return true;
 }
@@ -598,6 +594,9 @@ void CCoplayConnectionHandler::OnLobbyListcmd(LobbyMatchList_t *pLobbyMatchList,
 
 void CCoplayConnectionHandler::JoinGame(GameRichPresenceJoinRequested_t *pParam)
 {
+    if (!pParam || !pParam->m_rgchConnect)
+        return;
+
     std::string cmd = pParam->m_rgchConnect;
 
     if(cmd.empty())
@@ -647,7 +646,7 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
 #endif
 
     g_pCoplayConnectionHandler->CloseAllConnections();
-    g_pCoplayConnectionHandler->SetRole(eConnectionRole_CLIENT);
+
 
     if ( Id.find_first_of('.', 0) != std::string::npos )//normal server, probably
     {
@@ -665,6 +664,11 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
             queuedcommand = std::string(args.GetCommandString());
             return;
         }
+        if (engine->IsConnected())
+        {
+            engine->ClientCmd_Unrestricted("disconnect");//mimic normal connect behavior
+        }
+
         CSteamID steamid;
 
         steamid.SetFromUint64(strtoull(Id.c_str(), NULL, 10));
@@ -688,11 +692,9 @@ CON_COMMAND(coplay_connect, "Connect wrapper that adds coplay functionality, use
             SteamNetworkingIdentity netID;
             netID.SetSteamID64(strtoull(Id.c_str(), NULL, 10));
 
-            SteamNetworkingConfigValue_t options[1];
-            options[0].SetInt32(k_ESteamNetworkingConfig_EnableDiagnosticsUI, 1);
-
             ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
-            SteamNetworkingSockets()->ConnectP2P(netID, 0, sizeof(options)/sizeof(SteamNetworkingConfigValue_t), options);
+            g_pCoplayConnectionHandler->SetRole(eConnectionRole_CLIENT);
+            SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
             return;
         }
         Warning("Coplay_Connect was called with an invalid SteamID! ( %llu )\n", steamid.ConvertToUint64());
