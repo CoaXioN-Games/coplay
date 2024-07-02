@@ -3,10 +3,12 @@
 Logo made by FLARE145.
 
 # Coplay
-A MPL2 licensed Source Engine multiplayer SDK addon that enables the use of the Steam Datagram Relay for P2P connections with support for Linux and Windows.
+A MPL2 licensed Source Engine Multiplayer SDK addon that enables the use of the Steam Datagram Relay for P2P connections with support for Linux and Windows.
+
+If your mod implements Coplay please redirrect issue reports related to it [here](https://github.com/CoaXioN-Games/coplay/issues/new).
 
 ## Usage
-Mods implementing Coplay should make their own UI but there are commands and cvars that come standard.
+Mods implementing Coplay can make their own UI if they want to but there are commands and cvars that come standard.
 
 | Command | Description | Usage |
 | :-----: | :---------: | :---: |
@@ -35,7 +37,7 @@ Mods implementing Coplay should make their own UI but there are commands and cva
 ## Prerequistes
 
 ### Updating the Steamworks SDK
-A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here.](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip)
+A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip).
 
 1. Delete the `public/steam` folder of your mod's source tree and replace it with `public/steam` folder inside the downloaded zip, you're safe to delete the contained `lib` folder if you want.
 
@@ -57,7 +59,7 @@ bool bValid = ( pCmd->tick_count >= nMinDelta && pCmd->tick_count < nMaxDelta ) 
 ```
 to
 ```
-// when using host_thread_mode 1 on a listen server the client and server tickcount get desynced resulting in none of the hosts usermsgs getting accepted
+// when using host_thread_mode 1 or 2 on a listen server the client and server tickcount get desynced resulting in none of the hosts usermsgs getting accepted
 // this first || fixes that and doesnt seem to do anything else as far as i can tell; Tholp
     bool bValid = ((!engine->IsDedicatedServer() && entindex() == 1) || ( pCmd->tick_count >= nMinDelta && pCmd->tick_count < nMaxDelta )) &&
 				  // Prevent clients from sending invalid view angles to try to get leaf server code to crash
@@ -74,9 +76,13 @@ to
 
 2. Open your mod's client .vpc file, and add the line
 `$Include "$SRCDIR\coplay\src\coplay.vpc"`
-to it somewhere at the top, if your mod is on Steam you'll probably want to append `COPLAY_USE_LOBBIES` to your preproccessor definitions.
+to it somewhere at the top, if your mod has an appid on Steam you'll probably want to append `COPLAY_USE_LOBBIES` to your `$PreprocessorDefinitions`( Don't add this preprocessor if your mod does not have an appid, otherwise Coplay will be effectively nonfunctional ).
 
-3. Thats it! Rerun your VPC script and build!
+3. Rerun your VPC script and build.
+
+4. If you have linker issues when building on Linux delete the libSDL2.so found in your mod's `src/lib/public/linux32` folder and retry.
+
+5. Add the SDL2_net.dll and libSDL2_net.so (if your mod supports Linux) found in coplay/lib to you mod's /bin folder.
 
 # FAQ
 
@@ -85,6 +91,15 @@ Coplay is a network relay that maps ports on your local machine to Steam datagra
 
 ## Whats the difference if Steam's Lobby system is available?
 Lobbies allow user hosted games to be advertised and joined akin to the server browser.
+
+## Does custom content work?
+Yes, as normal.
+
+## My mod wont launch anymore! "Can't load library client"
+Reading the instructions is recomended.
+
+## I Can't move in my own local server!
+Reading the instructions is recomended.
 
 ## Whats your favorite color?
 Green, thanks for asking.
