@@ -12,6 +12,7 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 
 | Command | Description | Usage |
 | :-----: | :---------: | :---: |
+| `coplay_about` | Reddirects to this Github page and prints the current version | `coplay_about` |
 | `coplay_connect` | Connect to a server with a Ipv4 address, User SteamID64 or Lobby SteamID64 * | `coplay_connect (IP or SteamID64)` |
 | `coplay_getconnectcommand` | Prints a command for others to use to connect to your server | `coplay_getconnectcommand` |
 | `coplay_opensocket` | Allows your game to be joined via Coplay, this is automatically called on server creation if coplay_joinfilter is above -1 | `coplay_opensocket` |

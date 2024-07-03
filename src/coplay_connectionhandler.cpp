@@ -1,4 +1,3 @@
-
 /*
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
@@ -321,12 +320,12 @@ CON_COMMAND(coplay_closesocket, "Close p2p listener")
         g_pCoplayConnectionHandler->CloseP2PSocket();
 }
 
-CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join you")
+int CCoplayConnectionHandler::GetConnectCommand(std::string &out)
 {
-    if (!g_pCoplayConnectionHandler || g_pCoplayConnectionHandler->GetRole() == eConnectionRole_NOT_CONNECTED)
+    out = "";
+    if ( GetRole() == eConnectionRole_NOT_CONNECTED )
     {
-        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently in a game joinable by Coplay.\n");
-        return;
+        return 1;
     }
 
     uint64 id;
@@ -341,13 +340,38 @@ CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join
     if (coplay_joinfilter.GetInt() == eP2PFilter_CONTROLLED)
     {
 #ifdef COPLAY_USE_LOBBIES
-        ConColorMsg(COPLAY_MSG_COLOR, "You currently have coplay_joinfilter set to invite only, Use coplay_invite\n");
+        return 2;
 #else
-        ConColorMsg(COPLAY_MSG_COLOR, "\ncoplay_connect %llu %s", id, g_pCoplayConnectionHandler->GetPassword().c_str());
+        out = "coplay_connect " + std::to_string(id) + " " + GetPassword();
 #endif
     }
     else
-        ConColorMsg(COPLAY_MSG_COLOR, "\ncoplay_connect %llu\n", id);
+    {
+        out = "coplay_connect " + std::to_string(id);
+    }
+
+    return 0;
+}
+
+CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join you")
+{
+    if (!g_pCoplayConnectionHandler)
+        return;
+    std::string cmd;
+    switch (g_pCoplayConnectionHandler->GetConnectCommand(cmd))
+    {
+    case 1:
+        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently in a game joinable by Coplay.\n");
+    break;
+
+    case 2:
+        ConColorMsg(COPLAY_MSG_COLOR, "You currently have coplay_joinfilter set to invite only, Use coplay_invite\n");
+    break;
+
+    case 0:
+        ConColorMsg(COPLAY_MSG_COLOR, "\n%s\n", cmd.c_str());
+    break;
+    }
 }
 
 bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hConn)
@@ -728,5 +752,11 @@ CON_COMMAND(coplay_debug_printstate, "")
         return;
 
     ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "Role: %i\nActive Connections: %i\n", g_pCoplayConnectionHandler->GetRole(), g_pCoplayConnectionHandler->Connections.Count());
+}
 
+CON_COMMAND(coplay_about, "")
+{
+    ConColorMsg(COPLAY_MSG_COLOR, "Coplay allows P2P connections in sourcemods. Visit the Github page for more information and source code\n");
+    ConColorMsg(COPLAY_MSG_COLOR, "https://github.com/CoaXioN-Games/coplay\n\n");
+    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %d.\n", COPLAY_VERSION);
 }

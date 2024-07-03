@@ -26,9 +26,11 @@
 
 #define COPLAY_MAX_PACKETS 16
 
+#define COPLAY_VERSION 1
 
 //For vpcless quick testing, leave this commented when commiting
 //#define COPLAY_USE_LOBBIES
+//#undef COPLAY_USE_LOBBIES
 
 #include <cbase.h>
 #include "SDL2/SDL_net.h"
@@ -181,6 +183,8 @@ public:
     void        CloseP2PSocket();
     void        CloseAllConnections(bool waitforjoin = false);
     bool        CreateSteamConnectionTuple(HSteamNetConnection hConn);
+
+    int         GetConnectCommand(std::string &out);// 0: OK, 1: Not Hosting, 2: Use Coplay_invite instead
 
     ConnectionRole GetRole(){return Role;}
     void           SetRole(ConnectionRole newrole);
