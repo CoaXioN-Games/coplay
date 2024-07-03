@@ -38,7 +38,7 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 ## Prerequistes
 
 ### Updating the Steamworks SDK
-A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip).
+A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip).
 
 1. Delete the `public/steam` folder of your mod's source tree and replace it with `public/steam` folder inside the downloaded zip, you're safe to delete the contained `lib` folder if you want.
 
