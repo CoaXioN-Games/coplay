@@ -38,13 +38,16 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 ## Prerequistes
 
 ### Updating the Steamworks SDK
-A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip).
+A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip).
+
+If your mod still has references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` either replace them with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`) or use the last version of the Steamworks SDK that still provides it, 159, found [here](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip).
 
 1. Delete the `public/steam` folder of your mod's source tree and replace it with `public/steam` folder inside the downloaded zip, you're safe to delete the contained `lib` folder if you want.
 
 2. Replace the steam_api.lib and libsteam_api.so files found in `lib/public` and `lib/public/linux32` with the ones in the zip under the folder `redistributable_bin`. Make sure to copy the 32 bit versions.
 
-3. Rerun your VPC script and build, there may errors from existing code being incompatible but the Source SDK doesn't have much by default.
+3. Rerun your VPC script and build.
+
 
 ### Fix host_thread_mode
 Coplay enables this convar on start. Due to an engine bug, locally hosted servers will sometimes run faster than intended. host_thread_mode 2 fixes this but causes inputs by the host player to be discarded because of a desync.
