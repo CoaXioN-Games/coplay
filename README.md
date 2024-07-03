@@ -5,7 +5,7 @@ Logo made by FLARE145.
 # Coplay
 A MPL2 licensed Source Engine Multiplayer SDK addon that enables the use of the Steam Datagram Relay for P2P connections with support for Linux and Windows.
 
-If your mod implements Coplay please redirrect issue reports related to it [here](https://github.com/CoaXioN-Games/coplay/issues/new).
+If your mod implements Coplay please redirrect issue reports related to it [here](https://github.com/CoaXioN-Games/coplay/issues/new/choose).
 
 ## Usage
 Mods implementing Coplay can make their own UI if they want to but there are commands and cvars that come standard.
