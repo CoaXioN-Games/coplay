@@ -326,7 +326,8 @@ CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join
     break;
 
     case 0:
-        ConColorMsg(COPLAY_MSG_COLOR, "\n%s\n", cmd.c_str());
+        ConColorMsg(COPLAY_MSG_COLOR, "\n%s\nCopied to clipboard.", cmd.c_str());
+        SDL_SetClipboardText(cmd.c_str());
     break;
     }
 }
