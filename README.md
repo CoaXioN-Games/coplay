@@ -14,7 +14,7 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 | :-----: | :---------: | :---: |
 | `coplay_about` | Reddirects to this Github page and prints the current version | `coplay_about` |
 | `coplay_connect` | Connect to a server with a Ipv4 address, User SteamID64 or Lobby SteamID64 * | `coplay_connect (IP or SteamID64)` |
-| `coplay_getconnectcommand` | Prints a command for others to use to connect to your server | `coplay_getconnectcommand` |
+| `coplay_getconnectcommand` | Prints and copies to your clipboard a command others can use to connect to your game | `coplay_getconnectcommand` |
 | `coplay_opensocket` | Allows your game to be joined via Coplay, this is automatically called on server creation if coplay_joinfilter is above -1 | `coplay_opensocket` |
 | `coplay_closesocket` | Disables your game from being joined via Coplay, this will also kick currently connected players | `coplay_closesocket` |
 | `coplay_listlobbies`* | List joinable lobbies | `coplay_listlobbies` |
@@ -38,17 +38,23 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 ## Prerequistes
 
 ### Updating the Steamworks SDK
-A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download that works with [here](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip).
+A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay.
 
-If your mod still has references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` either replace them with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`) or use the last version of the Steamworks SDK that still provides it, 159, found [here](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip).
+Steamworks SDK version above [157](https://partner.steamgames.com/downloads/steamworks_sdk_157.zip) require more work to implement into the Source SDK, if you wish to use the [latest](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip) you need to
 
-Steamworks versions above 157 do not apear to work with the Source SDK by default, if neither of the above versions work for you the download for version 157 is [here](https://partner.steamgames.com/downloads/steamworks_sdk_157.zip). When a fix is confirmed to work this README will include it.
+1. Remove all references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` and replace with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`.)
+
+2. Remove clientsteamcontext.(cpp/h) from client_base.vpc.
+
+3. Remove all calls to SteamAPI_Init().
+
+After you might have done that you can:
 
 1. Delete the `public/steam` folder of your mod's source tree and replace it with `public/steam` folder inside the downloaded zip, you're safe to delete the contained `lib` folder if you want.
 
 2. Replace the steam_api.lib and libsteam_api.so files found in `lib/public` and `lib/public/linux32` with the ones in the zip under the folder `redistributable_bin`. Make sure to copy the 32 bit versions.
 
-3. Rerun your VPC script and build.
+3. Rerun your VPC script and build. Any remaining errors are up to you to fix but the SDK doesn't have many by default.
 
 
 ### Fix host_thread_mode
@@ -97,6 +103,9 @@ Coplay is a network relay that maps ports on your local machine to Steam datagra
 
 ## Whats the difference if Steam's Lobby system is available?
 Lobbies allow user hosted games to be advertised and joined akin to the server browser.
+
+## My game isn't in the server browser!
+Thats not what this does, if you are able to use lobbies look at the code for coplay_listlobbies for a starting point on how to make your own menu.
 
 ## Does custom content work?
 Yes, as normal.
