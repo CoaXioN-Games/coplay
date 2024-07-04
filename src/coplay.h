@@ -156,10 +156,42 @@ struct PendingConnection// for when we make a steam connection to ask for a pass
     float               TimeCreated = 0;
 };
 
+class CCoplayConnectionHandler;
+extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
+
 //Handles all the Steam callbacks and connection management
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame
 {
 public:
+
+    virtual bool Init()
+    {
+        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Initialization started...\n");
+
+    #ifdef GAME_DLL //may see if we can support dedicated servers at some point
+        if (!engine->IsDedicatedServer())
+        {
+            Remove(this);
+            return true;
+        }
+    #endif
+
+        if (SDL_Init(0))
+        {
+            Error("SDL Failed to Initialize: \"%s\"", SDL_GetError());
+        }
+        if (SDLNet_Init())
+        {
+            Error("SDLNet Failed to Initialize: \"%s\"", SDLNet_GetError());
+        }
+
+        SteamNetworkingUtils()->InitRelayNetworkAccess();
+
+
+        g_pCoplayConnectionHandler = this;
+        return true;
+    }
+
     virtual void Update(float frametime);
 
     virtual void Shutdown()
@@ -223,6 +255,6 @@ private:
     STEAM_CALLBACK(CCoplayConnectionHandler, LobbyJoinRequested,      GameLobbyJoinRequested_t);
 #endif
 };
-extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
+
 
 #endif

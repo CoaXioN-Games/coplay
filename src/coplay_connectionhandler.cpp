@@ -57,50 +57,7 @@ ConVar coplay_debuglog_lobbyupdated("coplay_debuglog_lobbyupdated", "0", 0, "Pri
 #endif
 
 CCoplayConnectionHandler *g_pCoplayConnectionHandler;
-
-class CCoplaySteamBootstrap : public CAutoGameSystem
-// we need to insure the steam api is loaded before we make any objects that need callbacks ( CCoplayConnectionHandler )
-{
-public:
-    virtual bool Init()
-    {
-        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Initialization started...\n");
-    #ifdef GAME_DLL //may support dedicated servers at some point
-        if (!engine->IsDedicatedServer())
-        {
-            Remove(this);
-            return true;
-        }
-
-    #endif
-        if (SDL_Init(0))
-        {
-            Error("SDL Failed to Initialize: \"%s\"", SDL_GetError());
-            return false;
-        }
-        if (SDLNet_Init())
-        {
-            Error("SDLNet Failed to Initialize: \"%s\"", SDLNet_GetError());
-            return false;
-        }
-        if (!SteamAPI_Init())
-        {
-            //Error("Steam API Failed to Init! (%s::%i)\n", __FILE__, __LINE__);
-            Warning("[Coplay] Steam Offline, Coplay disabled.\n");
-            return true;
-        }
-        SteamNetworkingUtils()->InitRelayNetworkAccess();
-
-
-        g_pCoplayConnectionHandler = new CCoplayConnectionHandler;
-        return true;
-    }
-    virtual void PostInitAllSystems()
-    {
-        Remove(this);//No longer needed
-    }
-}coplaybootstrap;
-
+CCoplayConnectionHandler CoplayConnectionHandler;
 
 void CCoplayConnectionHandler::Update(float frametime)
 {
