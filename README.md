@@ -38,9 +38,11 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 ## Prerequistes
 
 ### Updating the Steamworks SDK
-A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, If you haven't already updated your mod's version you can find the latest download [here](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip).
+A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay, ~~If you haven't already updated your mod's version you can find the latest download that works with [here](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip).~~
 
-If your mod still has references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` either replace them with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`) or use the last version of the Steamworks SDK that still provides it, 159, found [here](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip).
+~~If your mod still has references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` either replace them with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`) or use the last version of the Steamworks SDK that still provides it, 159, found [here](https://partner.steamgames.com/downloads/steamworks_sdk_159.zip).~~
+
+Steamworks versions above 157 do not apear to work with the Source SDK at the present moment, when/if a solution is found to be able to use them this README will include it. For now, the download for version 157 is [here](https://partner.steamgames.com/downloads/steamworks_sdk_157.zip).
 
 1. Delete the `public/steam` folder of your mod's source tree and replace it with `public/steam` folder inside the downloaded zip, you're safe to delete the contained `lib` folder if you want.
 
