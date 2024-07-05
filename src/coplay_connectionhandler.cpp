@@ -16,6 +16,8 @@
 #include <inetchannel.h>
 #include <inetchannelinfo.h>
 #include <steam/isteamgameserver.h>
+#include <vgui/ISystem.h>
+#include <tier3/tier3.h>
 
 std::string queuedcommand;
 
@@ -327,7 +329,7 @@ CON_COMMAND(coplay_getconnectcommand, "Prints a command for other people to join
 
     case 0:
         ConColorMsg(COPLAY_MSG_COLOR, "\n%s\nCopied to clipboard.", cmd.c_str());
-        SDL_SetClipboardText(cmd.c_str());
+        g_pVGuiSystem->SetClipboardText(cmd.c_str(), cmd.length());
     break;
     }
 }
@@ -716,5 +718,5 @@ CON_COMMAND(coplay_about, "")
 {
     ConColorMsg(COPLAY_MSG_COLOR, "Coplay allows P2P connections in sourcemods. Visit the Github page for more information and source code\n");
     ConColorMsg(COPLAY_MSG_COLOR, "https://github.com/CoaXioN-Games/coplay\n\n");
-    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %d.\n", COPLAY_VERSION);
+    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\n", COPLAY_VERSION);
 }
