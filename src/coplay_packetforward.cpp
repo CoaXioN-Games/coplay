@@ -273,16 +273,24 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     else
     {
         INetChannelInfo *netinfo = engine->GetNetChannelInfo();
-        std::string ip = netinfo->GetAddress();
-        if ( ip.find(':') == std::string::npos || ip.length() - 1 == ip.find(':'))
+        // netchannel is set to NULL when disconnecting as a host. be safe
+        if( !netinfo )
         {
             addr.port = SwapEndian16(27015);
         }
         else
         {
-            std::string portstr = ip.substr(ip.find(':') + 1, std::string::npos);
-            int port = std::stoi(portstr);
-            addr.port = SwapEndian16(port);
+            std::string ip = netinfo->GetAddress();
+            if ( ip.find(':') == std::string::npos || ip.length() - 1 == ip.find(':'))
+            {
+                addr.port = SwapEndian16(27015);
+            }
+            else
+            {
+                std::string portstr = ip.substr(ip.find(':') + 1, std::string::npos);
+                int port = std::stoi(portstr);
+                addr.port = SwapEndian16(port);
+            }
         }
     }
     SDLNet_UDP_Bind(LocalSocket, 1, &addr);// "Inbound" Channel
