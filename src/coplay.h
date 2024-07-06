@@ -26,7 +26,8 @@
 
 #define COPLAY_MAX_PACKETS 16
 
-#define COPLAY_VERSION "2024-07-5-a"
+//YYYY-MM-DD-(a-z) if theres multiple in a day
+#define COPLAY_VERSION "2024-07-06-a"
 
 //For vpcless quick testing, leave this commented when commiting
 //#define COPLAY_USE_LOBBIES
