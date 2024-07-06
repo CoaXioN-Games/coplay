@@ -404,6 +404,14 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Steam Connection status updated: Coplay role: %i, Peer SteamID64: %llu,\n Param: %i\n Old Param: %i\n",
                     GetRole(), pParam->m_info.m_identityRemote.GetSteamID64(), pParam->m_info.m_eState, pParam->m_eOldState);
 
+    if (GetRole() == eConnectionRole_HOST && !engine->IsConnected())// Somehow left without us catching it, map transistion load error or cancelation probably
+    {
+        SetRole(eConnectionRole_NOT_CONNECTED);
+        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", false);
+        return;
+    }
+
+
     switch (pParam->m_info.m_eState)
     {
     case k_ESteamNetworkingConnectionState_Connecting:
