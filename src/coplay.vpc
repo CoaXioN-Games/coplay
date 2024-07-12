@@ -36,9 +36,12 @@ $Project // "Coplay"
     {
         $Folder "Coplay"
         {
-            $File "$COPLAY_SRCDIR\coplay.h"
-			$File "$COPLAY_SRCDIR\coplay_connectionhandler.cpp"
-			$File "$COPLAY_SRCDIR\coplay_packetforward.cpp"
+			$File	"$COPLAY_SRCDIR\coplay_connectionhandler.cpp" \
+					"$COPLAY_SRCDIR\coplay_connection.cpp"
+			
+			$File	"$COPLAY_SRCDIR\coplay.h" \
+					"$COPLAY_SRCDIR\coplay_connectionhandler.h" \
+					"$COPLAY_SRCDIR\coplay_connection.h"
         }
     }
 

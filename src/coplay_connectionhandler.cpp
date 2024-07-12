@@ -12,15 +12,18 @@
 // Make, delete and keep track of steam connections & lobbies
 
 #include "cbase.h"
-#include <coplay.h>
 #include <inetchannel.h>
 #include <inetchannelinfo.h>
 #include <steam/isteamgameserver.h>
 #include <vgui/ISystem.h>
 #include <tier3/tier3.h>
+#include "coplay_connectionhandler.h"
+#include <SDL2/SDL_net.h>
 
 std::string queuedcommand;
 
+CCoplayConnectionHandler* g_pCoplayConnectionHandler;
+CCoplayConnectionHandler CoplayConnectionHandler;
 
 static void UpdateSleepTime()
 {
@@ -52,14 +55,53 @@ ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARC
                                   "Number of times to run a connection per second. Only change this if you know what it means.\n",
                                   true, 10, false, 0, (FnChangeCallback_t)UpdateSleepTime);
 
-ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0, "Prints more information when a socket is opened or closed.\n");
+
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
 #ifdef COPLAY_USE_LOBBIES
 ConVar coplay_debuglog_lobbyupdated("coplay_debuglog_lobbyupdated", "0", 0, "Prints when a lobby is created, joined or left.\n");
 #endif
 
-CCoplayConnectionHandler *g_pCoplayConnectionHandler;
-CCoplayConnectionHandler CoplayConnectionHandler;
+bool CCoplayConnectionHandler::Init()
+{
+    ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Initialization started...\n");
+
+#ifdef GAME_DLL //may see if we can support dedicated servers at some point
+    if (!engine->IsDedicatedServer())
+    {
+        Remove(this);
+        return true;
+    }
+#endif
+
+    if (SDL_Init(0))
+    {
+        Error("SDL Failed to Initialize: \"%s\"", SDL_GetError());
+    }
+    if (SDLNet_Init())
+    {
+        Error("SDLNet Failed to Initialize: \"%s\"", SDLNet_GetError());
+    }
+
+    SteamNetworkingUtils()->InitRelayNetworkAccess();
+
+
+    g_pCoplayConnectionHandler = this;
+    return true;
+}
+
+void CCoplayConnectionHandler::Shutdown()
+{
+    CloseAllConnections(true);
+}
+
+void CCoplayConnectionHandler::PostInit()
+{
+    // Some cvars we need on
+    ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");// allows connecting to 127.* addresses
+    ConVarRef host_thread_mode("host_thread_mode");// fixes game logic speedup, see the README for the required fix for this
+    net_usesocketsforloopback.SetValue(true);
+    host_thread_mode.SetValue(2);
+}
 
 void CCoplayConnectionHandler::Update(float frametime)
 {
@@ -353,13 +395,9 @@ bool CCoplayConnectionHandler::CreateSteamConnectionTuple(HSteamNetConnection hC
         }
     }
 
-
     CCoplayConnection *connection = new CCoplayConnection(hConn);
-
     connection->Start();
     Connections.AddToTail(connection);
-
-
     return true;
 }
 
@@ -514,8 +552,6 @@ void CCoplayConnectionHandler::ConnectionStatusUpdated(SteamNetConnectionStatusC
             if (Connections[i]->SteamConnection == pParam->m_hConn)
                 Connections[i]->QueueForDeletion();
         }
-
-
         break;
     }
 }
@@ -525,6 +561,17 @@ void CCoplayConnectionHandler::LobbyCreated(LobbyCreated_t *pParam)
 {
     SteamMatchmaking()->LeaveLobby(Lobby);//Leave the old lobby if we were in one
     Lobby = pParam->m_ulSteamIDLobby;
+}
+
+bool CCoplayConnectionHandler::IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
+{
+    uint32 numMembers = SteamMatchmaking()->GetNumLobbyMembers(LobbyID);
+    for (uint32 i = 0; i < numMembers; i++)
+    {
+        if (UserID.ConvertToUint64() == SteamMatchmaking()->GetLobbyMemberByIndex(LobbyID, i).ConvertToUint64())
+            return true;
+    }
+    return false;
 }
 
 void CCoplayConnectionHandler::LobbyJoined(LobbyEnter_t *pParam)
@@ -727,4 +774,28 @@ CON_COMMAND(coplay_about, "")
     ConColorMsg(COPLAY_MSG_COLOR, "Coplay allows P2P connections in sourcemods. Visit the Github page for more information and source code\n");
     ConColorMsg(COPLAY_MSG_COLOR, "https://github.com/CoaXioN-Games/coplay\n\n");
     ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\n", COPLAY_VERSION);
+}
+
+CON_COMMAND_F(coplay_debug_senddummy_steam, "", FCVAR_CLIENTDLL)
+{
+    for (int i = 0; i < g_pCoplayConnectionHandler->Connections.Count(); i++)
+    {
+        CCoplayConnection* con = g_pCoplayConnectionHandler->Connections[i];
+        if (!con)
+            continue;
+        char string[] = "Completely Random Test String (tm)";
+        int64 msgout;
+        SteamNetworkingSockets()->SendMessageToConnection(con->m_hSteamConnection, string, sizeof(string),
+            k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
+            &msgout);
+
+    }
+}
+
+CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
+{
+    IPaddress addr[16];
+    int num = SDLNet_GetLocalAddresses(addr, sizeof(addr) / sizeof(IPaddress));
+    for (int i = 0; i < num; i++)
+        Msg("%i.%i.%i.%i\n", ((uint8*)&addr[i].host)[0], ((uint8*)&addr[i].host)[1], ((uint8*)&addr[i].host)[2], ((uint8*)&addr[i].host)[3]);
 }
