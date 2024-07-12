@@ -14,12 +14,14 @@ public:
     CCoplayConnection(HSteamNetConnection hConn, ConnectionRole role, unsigned sleepTime);
     void QueueForDeletion() { m_deletionQueued = true; }
 
+public:
+    HSteamNetConnection     m_hSteamConnection;
+
 private:
     bool      m_gameReady;// only check for inital messaging for passwords, if needed, a connecting client cant know for sure
     UDPsocket m_localSocket;
     uint16    m_port ;
     IPaddress m_sendbackAddress;
-    HSteamNetConnection     m_hSteamConnection;
     float                   m_timeStarted;
     CInterlockedInt         m_deletionQueued;
     float m_lastPacketTime;//This is for when the steam connection is still being kept alive but there is no actual activity

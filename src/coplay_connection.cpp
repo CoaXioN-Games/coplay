@@ -287,7 +287,6 @@ int CCoplayConnection::Run()
     SDLNet_FreePacketV(LocalInboundPackets);
     SDLNet_UDP_Close(m_localSocket);
     SteamNetworkingSockets()->CloseConnection(m_hSteamConnection, k_ESteamNetConnectionEnd_App_ClosedByPeer, "", false);
-    g_pCoplayConnectionHandler->Connections.FindAndRemove(this);
 
     if (coplay_debuglog_socketcreation.GetBool())
     {
