@@ -96,6 +96,8 @@ to it somewhere at the top, if your mod has an appid on Steam you'll probably wa
 
 5. Add the SDL2_net.dll and libSDL2_net.so (if your mod supports Linux) found in coplay/lib to you mod's /bin folder.
 
+If your mod already links to SDL2 and/or you don't want to use Coplay's version for whatever reason, add `$Conditional COPLAY_DONT_LINK_SDL2 "1"` before the Coplay $Include in your VPC. A similar conditional for SDL2_net exists, `$Conditional COPLAY_DONT_LINK_SDL2_NET "1"`.
+
 # FAQ
 
 ## How?

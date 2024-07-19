@@ -20,7 +20,8 @@ $Configuration
 {
 	$Compiler
 	{
-		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\coplay\include;$COPLAY_SRCDIR;"
+		$AdditionalIncludeDirectories		"$BASE;$COPLAY_SRCDIR"
+		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\coplay\include" [!$COPLAY_DONT_LINK_SDL2]
 		$PreprocessorDefinitions			"$BASE;COPLAY"
 	}
 
@@ -44,7 +45,7 @@ $Project // "Coplay"
 
     $Folder	"Link Libraries"
     {
-		$ImpLibExternal $COPLAY_LIBDIR\SDL2
-		$ImpLibExternal $COPLAY_LIBDIR\SDL2_net
+		$ImpLibExternal $COPLAY_LIBDIR\SDL2 [!$COPLAY_DONT_LINK_SDL2]
+		$ImpLibExternal $COPLAY_LIBDIR\SDL2_net [!$COPLAY_DONT_LINK_SDL2_NET]
     }
 }
