@@ -31,6 +31,7 @@ Mods implementing Coplay can make their own UI if they want to but there are com
 | coplay_forceloopback | Uses the loopback interface instead of others, only change this if you have issues | 1 |
 
 \* : Only available when Steam Lobbies are, lobbies can only be enabled for mods with an appid on Steam.
+
 \** :  Only change this if issues arise, a range of at least 64 is recommended.
 
 # Adding to your mod
