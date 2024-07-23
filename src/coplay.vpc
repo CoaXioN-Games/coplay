@@ -23,6 +23,11 @@ $Configuration
 		$AdditionalIncludeDirectories		"$BASE;$COPLAY_SRCDIR"
 		$AdditionalIncludeDirectories		"$BASE;$SRCDIR\coplay\include" [!$COPLAY_DONT_LINK_SDL2]
 		$PreprocessorDefinitions			"$BASE;COPLAY"
+
+		$PreprocessorDefinitions			"$BASE;COPLAY_USE_LOBBIES" [$COPLAY_USE_LOBBIES]
+		$PreprocessorDefinitions			"$BASE;COPLAY_DONT_UPDATE_RPC" [$COPLAY_DONT_UPDATE_RPC]
+		$PreprocessorDefinitions			"$BASE;$COPLAY_DONT_LINK_SDL2" [$COPLAY_DONT_LINK_SDL2]
+		$PreprocessorDefinitions			"$BASE;$COPLAY_DONT_LINK_SDL2_NET" [$COPLAY_DONT_LINK_SDL2_NET]
 	}
 
 	$Linker

@@ -11,26 +11,26 @@ If your mod implements Coplay please redirrect issue reports related to it [here
 Mods implementing Coplay can make their own UI if they want to but there are commands and cvars that come standard.
 
 | Command | Description | Usage |
-| :-----: | :---------: | :---: |
-| `coplay_about` | Reddirects to this Github page and prints the current version | `coplay_about` |
-| `coplay_connect` | Connect to a server with a Ipv4 address, User SteamID64 or Lobby SteamID64 * | `coplay_connect (IP or SteamID64)` |
-| `coplay_getconnectcommand` | Prints and copies to your clipboard a command others can use to connect to your game | `coplay_getconnectcommand` |
-| `coplay_opensocket` | Allows your game to be joined via Coplay, this is automatically called on server creation if coplay_joinfilter is above -1 | `coplay_opensocket` |
-| `coplay_closesocket` | Disables your game from being joined via Coplay, this will also kick currently connected players | `coplay_closesocket` |
-| `coplay_listlobbies`* | List joinable lobbies | `coplay_listlobbies` |
-| `coplay_invite`* | Brings up the game invite dialog if you're in a game | `coplay_invite` |
+| :----- | :--------- | :--- |
+| coplay_about | Links to this Github page and prints the current version and enabled build options | `coplay_about` |
+| coplay_connect | Connect to a server with a Ipv4 address, User SteamID64 or Lobby SteamID64 * | `coplay_connect (IP or SteamID64)` |
+| coplay_getconnectcommand | Prints and copies to your clipboard a command others can use to connect to your game | `coplay_getconnectcommand` |
+| coplay_opensocket | Allows your game to be joined via Coplay, this is automatically called on server creation if coplay_joinfilter is above -1 | `coplay_opensocket` |
+| coplay_closesocket | Disables your game from being joined via Coplay, this will also kick currently connected players | `coplay_closesocket` |
+| coplay_listlobbies* | List joinable lobbies | `coplay_listlobbies` |
+| coplay_invite* | Brings up the game invite dialog if you're in a game | `coplay_invite` |
 
 
 | Cvar | Description | Default value |
-| :--: | :---------: | :-----------: |
-| `coplay_joinfilter` | Sets who is allowed to join the game. -1: Off, 0: Invite Only, 1: Friends only, 2: Anyone(Lobby advertised if available*) | 1 |
-| `coplay_timeoutduration` | How long in seconds to keep a connection around that has no game activity | 5 |
-| `coplay_portrange_begin` ** | Where to start looking for ports to bind on | 3600 |
-| `coplay_portrange_end` ** | Where to stop looking for ports to bind on | 3700 |
-| `coplay_connectionthread_hz` | Number of times to service connections per second, it's unlikely you'll need to change this | 300 |
-| `coplay_forceloopback` | Uses the loopback interface instead of others, only change this if you have issues | 1 |
+| :-- | :--------- | :----------- |
+| coplay_joinfilter | Sets who is allowed to join the game. -1: Off, 0: Invite Only, 1: Friends only, 2: Anyone(Lobby advertised if available*) | 1 |
+| coplay_timeoutduration | How long in seconds to keep a connection around that has no game activity | 5 |
+| coplay_portrange_begin ** | Where to start looking for ports to bind on | 3600 |
+| coplay_portrange_end ** | Where to stop looking for ports to bind on | 3700 |
+| coplay_connectionthread_hz | Number of times to service connections per second, it's unlikely you'll need to change this | 300 |
+| coplay_forceloopback | Uses the loopback interface instead of others, only change this if you have issues | 1 |
 
-\* : Requires Steam Lobbies, Lobbies are only available for mods with an appid on Steam.
+\* : Only available when Steam Lobbies are, lobbies can only be enabled for mods with an appid on Steam.
 \** :  Only change this if issues arise, a range of at least 64 is recommended.
 
 # Adding to your mod
@@ -88,7 +88,7 @@ to
 
 2. Open your mod's client .vpc file, and add the line
 `$Include "$SRCDIR\coplay\src\coplay.vpc"`
-to it somewhere at the top, if your mod has an appid on Steam you'll probably want to append `COPLAY_USE_LOBBIES` to your `$PreprocessorDefinitions`( Don't add this preprocessor if your mod does not have an appid, otherwise Coplay will be effectively nonfunctional ).
+to it somewhere at the top.
 
 3. Rerun your VPC script and build.
 
@@ -96,7 +96,16 @@ to it somewhere at the top, if your mod has an appid on Steam you'll probably wa
 
 5. Add the SDL2_net.dll and libSDL2_net.so (if your mod supports Linux) found in coplay/lib to you mod's /bin folder.
 
-If your mod already links to SDL2 and/or you don't want to use Coplay's version for whatever reason, add `$Conditional COPLAY_DONT_LINK_SDL2 "1"` before the Coplay $Include in your VPC. A similar conditional for SDL2_net exists, `$Conditional COPLAY_DONT_LINK_SDL2_NET "1"`.
+### Additional VPC Options
+
+| Name | Function |
+| :-- |  :------ |
+| COPLAY_USE_LOBBIES | Makes Coplay use Steam's lobby system for managing connections, this allows for games with Coplay enabled to list themselves on Steam. This requires your mod to have an AppID on Steam to function. |
+| COPLAY_DONT_UPDATE_RPC | Disables Coplay updating Steam Rich Presence, if you would rather use your own implementation. |
+| COPLAY_DONT_LINK_SDL2 |  Disables Coplay's linking to SDL2, for if you already bind to it elsewhere. |
+| COPLAY_DONT_LINK_SDL2_NET | Same as above but for SDL2_net. |
+
+To use these options place `$Conditional OPTION_NAME "1"` above the Coplay `$Include` for each one you want to enable. ( ex.`$Conditional COPLAY_USE_LOBBIES "1"` )
 
 # FAQ
 
@@ -117,6 +126,9 @@ Reading the instructions is recomended.
 
 ## I Can't move in my own local server!
 Reading the instructions is recomended.
+
+## Can I DM a contributor on Discord for support?
+You will most likely be refered to this page if you do. If you have found an undocumented bug open an issue.
 
 ## Whats your favorite color?
 Green, thanks for asking.

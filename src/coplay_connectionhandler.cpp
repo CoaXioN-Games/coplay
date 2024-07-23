@@ -64,7 +64,6 @@ CCoplayConnectionHandler CoplayConnectionHandler;
 void CCoplayConnectionHandler::Update(float frametime)
 {
     static bool checkavail = true;
-    static float lastSteamRPCUpdate = 0.0f;
     SteamAPI_RunCallbacks();
     if (checkavail) // The callback specifically to check this is registered by the engine already :/
     {
@@ -85,7 +84,9 @@ void CCoplayConnectionHandler::Update(float frametime)
         }
     }
 
-    if (gpGlobals->realtime > lastSteamRPCUpdate + 1.0f)// Those poor steam servers...
+#ifndef COPLAY_DONT_UPDATE_RPC
+    static float lastSteamRPCUpdate = 0.0f;
+    if (gpGlobals->realtime > lastSteamRPCUpdate + 1.0f)
     {
 #ifndef COPLAY_USE_LOBBIES
         if (engine->IsConnected() && coplay_joinfilter.GetInt() != eP2PFilter_CONTROLLED)// Being in a lobby sets the connect string automatically
@@ -136,6 +137,7 @@ void CCoplayConnectionHandler::Update(float frametime)
 #endif
         lastSteamRPCUpdate = gpGlobals->realtime;
     }
+#endif
 
 #ifndef COPLAY_USE_LOBBIES //waiting for password on pending clients
     for (int i = 0; i < PendingConnections.Count(); i++)
@@ -726,5 +728,19 @@ CON_COMMAND(coplay_about, "")
 {
     ConColorMsg(COPLAY_MSG_COLOR, "Coplay allows P2P connections in sourcemods. Visit the Github page for more information and source code\n");
     ConColorMsg(COPLAY_MSG_COLOR, "https://github.com/CoaXioN-Games/coplay\n\n");
-    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\n", COPLAY_VERSION);
+    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\n\n", COPLAY_VERSION);
+
+    ConColorMsg(COPLAY_MSG_COLOR, "Active Coplay build options:\n");
+#ifdef COPLAY_USE_LOBBIES
+    ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_USE_LOBBIES\n");
+#endif
+#ifdef COPLAY_DONT_UPDATE_RPC
+    ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_DONT_UPDATE_RPC\n");
+#endif
+#ifdef COPLAY_DONT_LINK_SDL2
+    ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_DONT_LINK_SDL2\n");
+#endif
+#ifdef COPLAY_DONT_LINK_SDL2_NET
+    ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_DONT_LINK_SDL2_NET\n");
+#endif
 }
