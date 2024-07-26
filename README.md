@@ -105,6 +105,7 @@ to it somewhere at the top.
 | COPLAY_DONT_UPDATE_RPC | Disables Coplay updating Steam Rich Presence, if you would rather use your own implementation. |
 | COPLAY_DONT_LINK_SDL2 |  Disables Coplay's linking to SDL2, for if you already bind to it elsewhere. |
 | COPLAY_DONT_LINK_SDL2_NET | Same as above but for SDL2_net. |
+| $COPLAY_DONT_SET_THREADMODE | Disables automatically setting host_thread_mode, may be removed later if a better solution for server pacing issues is found |
 
 To use these options place `$Conditional OPTION_NAME "1"` above the Coplay `$Include` for each one you want to enable. ( ex.`$Conditional COPLAY_USE_LOBBIES "1"` )
 

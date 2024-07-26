@@ -27,7 +27,7 @@
 #define COPLAY_MAX_PACKETS 16
 
 //YYYY-MM-DD-(a-z) if theres multiple in a day
-#define COPLAY_VERSION "2024-07-23-a"
+#define COPLAY_VERSION "2024-07-26-a"
 
 //For vpcless quick testing, leave this commented when commiting
 //#define COPLAY_USE_LOBBIES
@@ -206,7 +206,9 @@ public:
         ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");// allows connecting to 127.* addresses
         ConVarRef host_thread_mode("host_thread_mode");// fixes game logic speedup, see the README for the required fix for this
         net_usesocketsforloopback.SetValue(true);
+#ifndef COPLAY_DONT_USE_THREADMODE
         host_thread_mode.SetValue(2);
+#endif
     }
 
     virtual void LevelInitPostEntity();
