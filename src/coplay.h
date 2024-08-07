@@ -135,26 +135,31 @@ public:
     CCoplayConnection(HSteamNetConnection hConn);
 
     bool      GameReady;// only check for inital messaging for passwords, if needed, a connecting client cant know for sure
-    UDPsocket LocalSocket = NULL;
-    uint16    Port = 0;
+    UDPsocket LocalSocket;
+    uint16    Port;
     IPaddress SendbackAddress;
 
-    HSteamNetConnection     SteamConnection = 0;
+    HSteamNetConnection     SteamConnection;
     float                   TimeStarted;
 
     void QueueForDeletion(){DeletionQueued = true;}
 
 private:
-    bool DeletionQueued = false;
+    bool DeletionQueued;
 
-    float LastPacketTime = 0;//This is for when the steam connection is still being kept alive but there is no actual activity
+    float LastPacketTime;//This is for when the steam connection is still being kept alive but there is no actual activity
 };
 
 struct PendingConnection// for when we make a steam connection to ask for a password but
                         // not letting it send packets to the game server yet
 {
-    HSteamNetConnection SteamConnection = 0;
-    float               TimeCreated = 0;
+    PendingConnection() {
+        SteamConnection = 0;
+        TimeCreated = 0.0f;
+    };
+
+    HSteamNetConnection SteamConnection;
+    float               TimeCreated;
 };
 
 class CCoplayConnectionHandler;
@@ -164,6 +169,11 @@ extern CCoplayConnectionHandler *g_pCoplayConnectionHandler;
 class CCoplayConnectionHandler : public CAutoGameSystemPerFrame
 {
 public:
+    CCoplayConnectionHandler()
+    {
+        msSleepTime = 3;
+        Role = eConnectionRole_UNAVAILABLE;
+    }
 
     virtual bool Init()
     {
@@ -230,10 +240,10 @@ public:
     void                RechoosePassword();
 #endif
 
-    uint32         msSleepTime = 3;
+    uint32         msSleepTime;
 
 private:
-    ConnectionRole      Role = eConnectionRole_UNAVAILABLE;
+    ConnectionRole      Role;
     HSteamListenSocket  HP2PSocket;
 #ifdef COPLAY_USE_LOBBIES
     CSteamID            Lobby;

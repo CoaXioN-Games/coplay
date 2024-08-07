@@ -201,6 +201,11 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn)
     SteamConnection = hConn;
     LastPacketTime = gpGlobals->realtime;
 
+    // Initialize
+    LocalSocket = NULL;
+    Port = 0;
+    DeletionQueued = false;
+
     UDPsocket sock = NULL;
     for (uint16 port = coplay_portrange_begin.GetInt(); port < coplay_portrange_end.GetInt(); port++)
     {
