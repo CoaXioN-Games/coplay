@@ -43,40 +43,31 @@ public:
 
     ConnectionRole GetRole(){return m_role;}
     void           SetRole(ConnectionRole newrole);
-#ifdef COPLAY_USE_LOBBIES
     CSteamID    GetLobby(){return m_lobby;}
-#else
     std::string         GetPassword(){return m_password;}
     void                RechoosePassword();
-#endif
 
-    uint32         m_msSleepTime = 3;
-
-private:
-    ConnectionRole      m_role = eConnectionRole_UNAVAILABLE;
-    HSteamListenSocket  m_hP2PSocket;
-#ifdef COPLAY_USE_LOBBIES
-    CSteamID            m_lobby;
-#else
 public:
-    std::string                m_password;// we use this same variable for a password we need to send if we're the client, or the one we need to check agaisnt if we're the server
-    CUtlVector<PendingConnection> m_pendingConnections; // cant connect to the server but has a steam connection to send a password
-
-#endif
-public:
-    CUtlVector<CCoplayConnection*> m_connections;
-
-    CCallResult<CCoplaySystem, LobbyMatchList_t> m_lobbyListResult;
     void OnLobbyListcmd( LobbyMatchList_t *pLobbyMatchList, bool bIOFailure);
 
 private:
     STEAM_CALLBACK(CCoplaySystem, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
     STEAM_CALLBACK(CCoplaySystem, JoinGame,                GameRichPresenceJoinRequested_t);
-#ifdef COPLAY_USE_LOBBIES
     STEAM_CALLBACK(CCoplaySystem, LobbyCreated,            LobbyCreated_t);
     STEAM_CALLBACK(CCoplaySystem, LobbyJoined,             LobbyEnter_t);
     STEAM_CALLBACK(CCoplaySystem, LobbyJoinRequested,      GameLobbyJoinRequested_t);
-#endif
+
+public:
+    uint32         m_msSleepTime = 3;
+    std::string                m_password;// we use this same variable for a password we need to send if we're the client, or the one we need to check agaisnt if we're the server
+    CUtlVector<PendingConnection> m_pendingConnections; // cant connect to the server but has a steam connection to send a password
+    CUtlVector<CCoplayConnection*> m_connections;
+    CCallResult<CCoplaySystem, LobbyMatchList_t> m_lobbyListResult;
+
+private:
+    ConnectionRole      m_role = eConnectionRole_UNAVAILABLE;
+    HSteamListenSocket  m_hP2PSocket;
+    CSteamID            m_lobby;
 };
 
 extern CCoplaySystem* g_pCoplayConnectionHandler;

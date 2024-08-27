@@ -17,9 +17,16 @@
 // through the Steam datagram, the server machine recieves them and -
 // sends the UDP packets locally to the game server which has a similar mechanism to send back to the client.
 // This allows us to make use of the P2P features steam offers within the Source SDK without any networking code changes
-#pragma once
 #ifndef COPLAY_H
 #define COPLAY_H
+#pragma once
+
+#include "SDL2/SDL_net.h"
+#include "steam/steam_api.h"
+
+#include "tier0/valve_minmax_off.h"	// GCC 4.2.2 headers screw up our min/max defs.
+#include <string>
+#include "tier0/valve_minmax_on.h"
 
 #define COPLAY_MSG_COLOR Color(170, 255, 0, 255)
 #define COPLAY_DEBUG_MSG_COLOR Color(255, 170, 0, 255)
@@ -29,23 +36,8 @@
 //YYYY-MM-DD-(a-z) if theres multiple in a day
 #define COPLAY_VERSION "2024-07-26-a"
 
-//For vpcless quick testing, leave this commented when commiting
-//#define COPLAY_USE_LOBBIES
-//#undef COPLAY_USE_LOBBIES
-
-#include "SDL2/SDL_net.h"
-#include "steam/isteamnetworkingsockets.h"
-#include "steam/isteamnetworkingutils.h"
-#include "steam/isteamfriends.h"
-#include "steam/steam_api.h"
-#ifdef COPLAY_USE_LOBBIES
-#include "steam/isteammatchmaking.h"
-#endif
-
-
-#include "tier0/valve_minmax_off.h"	// GCC 4.2.2 headers screw up our min/max defs.
-#include <string>
-#include "tier0/valve_minmax_on.h"
+#define COPLAY_NETMSG_NEEDPASS "NeedPass"
+#define COPLAY_NETMSG_OK "OK"
 
 enum JoinFilter
 {
@@ -57,11 +49,7 @@ enum JoinFilter
     eP2PFilter_FRIENDS = 1,
     eP2PFilter_EVERYONE = 2,
 };
-#ifndef COPLAY_USE_LOBBIES
 
-#define COPLAY_NETMSG_NEEDPASS "NeedPass"
-#define COPLAY_NETMSG_OK "OK"
-#endif
 enum ConnectionRole
 {
     eConnectionRole_UNAVAILABLE = -1,// Waiting on Steam
@@ -82,21 +70,7 @@ enum ConnectionEndReason // see the enum ESteamNetConnectionEnd in steamnetworki
     k_ESteamNetConnectionEnd_App_BadPassword,
 };
 
-extern ConVar coplay_joinfilter;
-extern ConVar coplay_timeoutduration;
-extern ConVar coplay_connectionthread_hz;
-extern ConVar coplay_portrange_begin;
-extern ConVar coplay_portrange_end;
-extern ConVar coplay_forceloopback;
-
-extern ConVar coplay_debuglog_socketcreation;
-extern ConVar coplay_debuglog_socketspam;
-extern ConVar coplay_debuglog_steamconnstatus;
-extern ConVar coplay_debuglog_scream;
-#ifdef COPLAY_USE_LOBBIES
-extern ConVar coplay_debuglog_lobbyupdated;
-#endif
-
+// TODO - use SDL2_net's functions for this
 static uint32 SwapEndian32(uint32 num)
 {
     byte newnum[4];
@@ -114,7 +88,7 @@ static uint16 SwapEndian16(uint16 num)
     newnum[1] = ((byte*)&num)[0];
     return *((uint16*)newnum);
 }
-#ifdef COPLAY_USE_LOBBIES
+
 static bool IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
 {
     uint32 numMembers = SteamMatchmaking()->GetNumLobbyMembers(LobbyID);
@@ -125,5 +99,4 @@ static bool IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
     }
     return false;
 }
-#endif
 #endif
