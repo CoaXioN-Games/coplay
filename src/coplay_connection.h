@@ -11,7 +11,7 @@
 class CCoplayConnection : public CThread
 {
 public:
-    CCoplayConnection(HSteamNetConnection hConn);
+    CCoplayConnection(HSteamNetConnection hConn, int role);
     void QueueForDeletion(){ m_deletionQueued = true; }
 
 private:
@@ -26,9 +26,10 @@ public:
 
     HSteamNetConnection     m_hSteamConnection = 0;
     float                   m_timeStarted;
+	int 				   m_role;
 
 private:
-    bool m_deletionQueued = false;
+    CInterlockedInt m_deletionQueued;
     // For when the steam connection is still being kept alive but there is no actual activity
     float m_lastPacketTime = 0; 
 };

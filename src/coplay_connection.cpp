@@ -24,12 +24,17 @@ ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0", 0, "Prints 
 ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
 
 ConVar coplay_debuglog_socketcreation("coplay_debuglog_socketcreation", "0", 0, "Prints more information when a socket is opened or closed.\n");
+ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARCHIVE,
+    "Number of times to run a connection per second. Only change this if you know what it means.\n",
+    true, 10, false, 0);
 
-CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn) : m_localSocket(nullptr), m_port(0), m_sendbackAddress(), m_hSteamConnection(0), m_timeStarted(0)
+CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_localSocket(nullptr), m_port(0), m_sendbackAddress(), m_hSteamConnection(0), m_timeStarted(0)
 {
-    m_gameReady = g_pCoplayConnectionHandler->GetRole() == eConnectionRole_HOST; // Server side always knows if this is ready to go
+	m_role = role;
+    m_gameReady = m_role == eConnectionRole_HOST; // Server side always knows if this is ready to go
     m_hSteamConnection = hConn;
     m_lastPacketTime = gpGlobals->realtime;
+    m_deletionQueued = false;
 
     UDPsocket sock = NULL;
     for (uint16 port = coplay_portrange_begin.GetInt(); port < coplay_portrange_end.GetInt(); port++)
@@ -93,7 +98,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn) : m_localSocket(
         }
     }
 
-    if (g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
+    if (m_role == eConnectionRole_CLIENT)
     {
         ConVarRef clientport("clientport");
         addr.port = SwapEndian16(clientport.GetInt());
@@ -148,6 +153,9 @@ int CCoplayConnection::Run()
 
     int64 messageOut;
     
+    // TEMP IF TEMP IF TEMP IF
+    // FIX ME FIX ME FIX ME
+#if 0
 	extern ConVar coplay_use_lobbies;
     if (!coplay_use_lobbies.GetBool())
     {
@@ -176,7 +184,8 @@ int CCoplayConnection::Run()
             }
         }
     }
-    if (!m_deletionQueued && g_pCoplayConnectionHandler->GetRole() == eConnectionRole_CLIENT)
+#endif 
+    if (!m_deletionQueued && m_role == eConnectionRole_CLIENT)
     {
         ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
         std::string cmd;
@@ -199,11 +208,13 @@ int CCoplayConnection::Run()
             continue;
         }
 
+        // TODO - cache me?
+        int sleepTime = 1000/coplay_connectionthread_hz.GetInt();
         if (coplay_debuglog_scream.GetBool())
         {
-            Msg("Sleep %ims", g_pCoplayConnectionHandler->m_msSleepTime);
+            Msg("Sleep %ims", sleepTime);
         }
-        ThreadSleep(g_pCoplayConnectionHandler->m_msSleepTime);//dont work too hard
+        ThreadSleep(sleepTime);//dont work too hard
 
 
         //Outbound to SDR
@@ -286,27 +297,4 @@ int CCoplayConnection::Run()
         ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket closed with port %i.\n", m_port);
     }
     return 0;
-}
-
-CON_COMMAND_F(coplay_debug_senddummy_steam, "", FCVAR_CLIENTDLL)
-{
-    for (int i = 0; i < g_pCoplayConnectionHandler->m_connections.Count(); i++)
-    {
-        CCoplayConnection* con = g_pCoplayConnectionHandler->m_connections[i];
-        if (!con)
-            continue;
-        char string[] = "Completely Random Test String (tm)";
-        int64 msgout;
-        SteamNetworkingSockets()->SendMessageToConnection(con->m_hSteamConnection, string, sizeof(string),
-                                                          k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
-                                                          &msgout);
-    }
-}
-
-CON_COMMAND_F(coplay_listinterfaces, "", FCVAR_CLIENTDLL)
-{
-    IPaddress addr[16];
-    int num = SDLNet_GetLocalAddresses(addr, sizeof(addr) / sizeof(IPaddress));
-    for (int i = 0; i < num; i++)
-        Msg("%i.%i.%i.%i\n", ((uint8*)&addr[i].host)[0], ((uint8*)&addr[i].host)[1], ((uint8*)&addr[i].host)[2], ((uint8*)&addr[i].host)[3] );
 }
