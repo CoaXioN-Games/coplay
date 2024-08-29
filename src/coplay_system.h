@@ -14,6 +14,8 @@
 #include "steam/isteamnetworkingutils.h"
 #include "tier1/utlvector.h"
 #include "coplay_connection.h"
+#include "coplay_client.h"
+#include "coplay_host.h"
 
 struct PendingConnection// for when we make a steam connection to ask for a password but
     // not letting it send packets to the game server yet
@@ -93,5 +95,8 @@ private:
     HSteamListenSocket  m_hP2PSocket;
     CSteamID            m_lobby;
     FnCommandCallback_t m_oldConnectCallback;
+
+	CCoplayClient	   m_client;
+	CCoplayHost		   m_host;
 };
 #endif

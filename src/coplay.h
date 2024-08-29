@@ -70,25 +70,6 @@ enum ConnectionEndReason // see the enum ESteamNetConnectionEnd in steamnetworki
     k_ESteamNetConnectionEnd_App_BadPassword,
 };
 
-// TODO - use SDL2_net's functions for this
-static uint32 SwapEndian32(uint32 num)
-{
-    byte newnum[4];
-    newnum[0] = ((byte*)&num)[3];
-    newnum[1] = ((byte*)&num)[2];
-    newnum[2] = ((byte*)&num)[1];
-    newnum[3] = ((byte*)&num)[0];
-    return *((uint32*)newnum);
-}
-
-static uint16 SwapEndian16(uint16 num)
-{
-    byte newnum[2];
-    newnum[0] = ((byte*)&num)[1];
-    newnum[1] = ((byte*)&num)[0];
-    return *((uint16*)newnum);
-}
-
 static bool IsUserInLobby(CSteamID LobbyID, CSteamID UserID)
 {
     uint32 numMembers = SteamMatchmaking()->GetNumLobbyMembers(LobbyID);

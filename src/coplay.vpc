@@ -43,11 +43,17 @@ $Project // "Coplay"
     {
         $Folder "Coplay"
         {
-            $File "$COPLAY_SRCDIR\coplay.h"
-			$File "$COPLAY_SRCDIR\coplay_system.cpp"
-			$File "$COPLAY_SRCDIR\coplay_system.h"
-			$File "$COPLAY_SRCDIR\coplay_connection.cpp"
-			$File "$COPLAY_SRCDIR\coplay_connection.h"
+			$File	"$COPLAY_SRCDIR\coplay_connection.cpp" \
+					"$COPLAY_SRCDIR\coplay_system.cpp" \
+					"$COPLAY_SRCDIR\coplay_client.cpp" \
+					"$COPLAY_SRCDIR\coplay_host.cpp"
+					
+			
+            $File	"$COPLAY_SRCDIR\coplay.h" \
+					"$COPLAY_SRCDIR\coplay_connection.h" \
+					"$COPLAY_SRCDIR\coplay_system.h" \
+					"$COPLAY_SRCDIR\coplay_client.h" \
+					"$COPLAY_SRCDIR\coplay_host.h"
         }
     }
 

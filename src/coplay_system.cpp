@@ -10,7 +10,6 @@
 //================================================
 
 // Make, delete and keep track of steam connections & lobbies
-
 #include "cbase.h"
 #include "coplay_system.h"
 #include <inetchannel.h>
@@ -18,6 +17,8 @@
 #include <steam/isteamgameserver.h>
 #include <vgui/ISystem.h>
 #include <tier3/tier3.h>
+
+
 
 std::string queuedcommand;
 static CCoplaySystem g_CoplaySystem;
@@ -107,13 +108,13 @@ void CCoplaySystem::PostInit()
     host_thread_mode.SetValue(2);
 #endif
 
-	// hack to replace the connect command with our own
+	// replace the connect command with our own
     ConCommand* connectCommand = g_pCVar->FindCommand("connect");
     if (!connectCommand)
         return;
 
 	// vtable member variable offset magic
-    // TODO - do we need to shut up any warnings?
+	// this offset should be the same on the SP, MP and Alien Swarm branches. If you're on something older sorry.
     m_oldConnectCallback = *(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18);
     *(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18) = ConnectOverride;
 }
@@ -360,7 +361,7 @@ bool CCoplaySystem::CreateSteamConnectionTuple(HSteamNetConnection hConn)
     if (!SteamNetworkingSockets()->GetConnectionInfo(hConn, &newinfo))
         return false;
 
-    for (int i = 0; i< m_connections.Count(); i++)
+    for (int i = 0; i < m_connections.Count(); i++)
     {
         SteamNetConnectionInfo_t info;
         if (SteamNetworkingSockets()->GetConnectionInfo(m_connections[i]->m_hSteamConnection, &info))
@@ -373,12 +374,10 @@ bool CCoplaySystem::CreateSteamConnectionTuple(HSteamNetConnection hConn)
         }
     }
 
-
     CCoplayConnection *connection = new CCoplayConnection(hConn, m_role);
 
     connection->Start();
     m_connections.AddToTail(connection);
-
 
     return true;
 }
@@ -391,7 +390,7 @@ void CCoplaySystem::SetRole(ConnectionRole newrole)
     {
     case eConnectionRole_HOST:
         sv_lan.SetValue("1");//sv_lan off will heartbeat the server and allow clients to see our ip
-        engine_no_focus_sleep.SetValue("0"); // without this, if the host tabs out everyone lags
+        engine_no_focus_sleep.SetValue("0"); // without this, if the host unfocuses from the game everyone lags
         break;
     case eConnectionRole_CLIENT:
         engine_no_focus_sleep.SetValue(engine_no_focus_sleep.GetDefault());
@@ -502,6 +501,7 @@ void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
         SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", true);
+    // TODO - Fix this jesus christ
     // Intentionally no break
     case k_ESteamNetworkingConnectionState_ClosedByPeer:
 
@@ -672,23 +672,25 @@ void CCoplaySystem::CoplayConnect(const CCommand& args)
             SteamMatchmaking()->JoinLobby(steamid);
             return;
         }
-        if (steamid.BIndividualAccount())
-        {
-            if (coplay_use_lobbies.GetBool() && GetLobby().ConvertToUint64() == 0)
-            {
-                Warning("Coplay_Connect was called with a user SteamID before we were in a lobby!\n");
-                return;
-            }
-            
-            SteamNetworkingIdentity netID;
-            netID.SetSteamID64(strtoull(Id.c_str(), NULL, 10));
 
-            ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
-            SetRole(eConnectionRole_CLIENT);
-            SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
+        if (!steamid.BIndividualAccount())
+        {
+            Warning("Coplay_Connect was called with an invalid SteamID! ( %llu )\n", steamid.ConvertToUint64());
             return;
         }
-        Warning("Coplay_Connect was called with an invalid SteamID! ( %llu )\n", steamid.ConvertToUint64());
+
+        if (coplay_use_lobbies.GetBool() && GetLobby().ConvertToUint64() == 0)
+        {
+            Warning("Coplay_Connect was called with a user SteamID before we were in a lobby!\n");
+            return;
+        }
+        
+        SteamNetworkingIdentity netID;
+        netID.SetSteamID64(strtoull(Id.c_str(), NULL, 10));
+        
+        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
+        SetRole(eConnectionRole_CLIENT);
+        SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
     }
 }
 

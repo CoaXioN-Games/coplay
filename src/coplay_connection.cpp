@@ -37,32 +37,34 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_lo
     m_deletionQueued = false;
 
     UDPsocket sock = NULL;
+    // TODO - Do all ports need to be opened?
     for (uint16 port = coplay_portrange_begin.GetInt(); port < coplay_portrange_end.GetInt(); port++)
     {
         sock = SDLNet_UDP_Open(port);
-        if (sock)
+        if(!sock)
         {
-            m_localSocket = sock;
-            m_port = port;
-            break;
-        }
+			ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Couldn't bind to port %u\n", port);
+            continue;
+		}
+
+        m_localSocket = sock;
+        m_port = port;
+        break;
     }
 
     if (!sock)
     {
-        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range 26000-27000!)\n");
-        //return false;
+        Warning("[Coplay Error] What do you need all those ports for anyway? (Couldn't bind to a port on range %d-%d!)\n", 
+            coplay_portrange_begin.GetInt(), coplay_portrange_end.GetInt());
     }
 
-    IPaddress addr;
-    addr.host = 0;
-    //addr.host = SwapEndian32(INADDR_LOOPBACK);//SDLNet wants these in network byte order
-
+    IPaddress addr{};
     if (coplay_forceloopback.GetBool())
     {
-        addr.host = SwapEndian32(INADDR_LOOPBACK);
+        addr.host = SDL_Swap32(INADDR_LOOPBACK);
     }
-    else// This else block is only really here because I havent tested the above on enough computers yet
+    // This else block is only really here because I havent tested the above on enough computers yet
+    else
     {
         IPaddress localaddresses[16];
         int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses) / sizeof(IPaddress));
@@ -94,14 +96,14 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_lo
         if (addr.host == 0)
         {
             Warning("[Coplay Warning] Still didn't find a suitable local address! Trying loopback..\n");
-            addr.host = SwapEndian32(INADDR_LOOPBACK);
+            addr.host = SDL_Swap32(INADDR_LOOPBACK);
         }
     }
 
     if (m_role == eConnectionRole_CLIENT)
     {
         ConVarRef clientport("clientport");
-        addr.port = SwapEndian16(clientport.GetInt());
+        addr.port = SDL_Swap16(clientport.GetInt());
     }
     else
     {
@@ -109,20 +111,20 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_lo
         // netchannel is set to NULL when disconnecting as a host. be safe
         if (!netinfo)
         {
-            addr.port = SwapEndian16(27015);
+            addr.port = SDL_Swap16(27015);
         }
         else
         {
             std::string ip = netinfo->GetAddress();
             if (ip.find(':') == std::string::npos || ip.length() - 1 == ip.find(':'))
             {
-                addr.port = SwapEndian16(27015);
+                addr.port = SDL_Swap16(27015);
             }
             else
             {
                 std::string portstr = ip.substr(ip.find(':') + 1, std::string::npos);
                 int port = std::stoi(portstr);
-                addr.port = SwapEndian16(port);
+                addr.port = SDL_Swap16(port);
             }
         }
     }
@@ -138,13 +140,14 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_lo
     SetName(threadname.c_str());
 }
 
-
 int CCoplayConnection::Run()
-{   
+{
+    // TODO - can we get the MTU??
     ConVarRef net_maxroutable("net_maxroutable");
     m_timeStarted = gpGlobals->realtime;
     UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS, net_maxroutable.GetInt());
 
+    // TODO - what is meant by "COPLAY_MAX_PACKETS"? how was the number determined?
     SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];
     UDPpacket SteamPacket;
 
@@ -173,6 +176,8 @@ int CCoplayConnection::Run()
                 if (recvMsg == std::string(COPLAY_NETMSG_NEEDPASS))
                 {
                     //Msg("Sending Password %s...\n",g_pCoplayConnectionHandler->Password);
+
+                    // TODO - find less gross way to access password
                     SteamNetworkingSockets()->SendMessageToConnection(m_hSteamConnection,
                         g_pCoplayConnectionHandler->m_password.c_str(), g_pCoplayConnectionHandler->m_password.length(),
                         k_nSteamNetworkingSend_ReliableNoNagle | k_nSteamNetworkingSend_UseCurrentThread, &messageOut);
@@ -190,6 +195,7 @@ int CCoplayConnection::Run()
         ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
         std::string cmd;
         uint32 ipnum = m_sendbackAddress.host;
+        // TODO - less gross formatting
         cmd = "connect " + std::to_string(((uint8*)&ipnum)[0]) + '.' + std::to_string(((uint8*)&ipnum)[1]) + '.' +
                 std::to_string(((uint8*)&ipnum)[2]) + '.' + std::to_string(((uint8*)&ipnum)[3]) + ':' + std::to_string(m_port);
         engine->ClientCmd_Unrestricted(cmd.c_str());
@@ -209,13 +215,13 @@ int CCoplayConnection::Run()
         }
 
         // TODO - cache me?
+        // TODO - should this be moved to the end?
         int sleepTime = 1000/coplay_connectionthread_hz.GetInt();
         if (coplay_debuglog_scream.GetBool())
         {
             Msg("Sleep %ims", sleepTime);
         }
         ThreadSleep(sleepTime);//dont work too hard
-
 
         //Outbound to SDR
         if (coplay_debuglog_scream.GetBool())
@@ -236,10 +242,11 @@ int CCoplayConnection::Run()
 
         if (numSDLRecv == -1)
         {
+            // TODO - warn as we don't crash out, I think
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
         }
 
-
+        // TODO - should this be an uint8? overflow
         for (uint8 j = 0; j < numSDLRecv; j++)
         {
             SteamNetworkingSockets()->SendMessageToConnection(m_hSteamConnection, (const void*)LocalInboundPackets[j]->data,
