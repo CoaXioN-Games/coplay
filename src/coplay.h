@@ -27,7 +27,7 @@
 #define COPLAY_MAX_PACKETS 16
 
 //YYYY-MM-DD-(a-z) if theres multiple in a day
-#define COPLAY_VERSION "2024-07-26-a"
+#define COPLAY_VERSION "2024-09-03-a"
 
 //For vpcless quick testing, leave this commented when commiting
 //#define COPLAY_USE_LOBBIES
@@ -186,8 +186,12 @@ public:
             Error("SDLNet Failed to Initialize: \"%s\"", SDLNet_GetError());
         }
 
-        SteamNetworkingUtils()->InitRelayNetworkAccess();
-
+		if (SteamNetworkingUtils()) 
+		{
+			SteamNetworkingUtils()->InitRelayNetworkAccess();
+		} else {
+			Error("Failed to Initialize Steam Networking. Make sure that you have Steam open.");
+		}
 
         g_pCoplayConnectionHandler = this;
         return true;
