@@ -18,7 +18,6 @@
 ConVar coplay_timeoutduration("coplay_timeoutduration", "15", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
-ConVar coplay_forceloopback("coplay_forceloopback", "1", FCVAR_ARCHIVE, "Use the loopback interface for making connections instead of other interfaces. Only change this if you have issues.\n");
 
 ConVar coplay_debuglog_socketspam("coplay_debuglog_socketspam", "0", 0, "Prints the number of packets recieved by either interface if more than 0.\n");
 ConVar coplay_debuglog_scream("coplay_debuglog_scream", "0", 0, "Yells if the connection loop is working\n");
@@ -28,10 +27,8 @@ ConVar coplay_connectionthread_hz("coplay_connectionthread_hz", "300", FCVAR_ARC
     "Number of times to run a connection per second. Only change this if you know what it means.\n",
     true, 10, false, 0);
 
-CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_localSocket(nullptr), m_port(0), m_sendbackAddress(), m_hSteamConnection(0), m_timeStarted(0)
+CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn) : m_localSocket(nullptr), m_port(0), m_sendbackAddress(), m_hSteamConnection(0), m_timeStarted(0)
 {
-	m_role = role;
-    m_gameReady = m_role == eConnectionRole_HOST; // Server side always knows if this is ready to go
     m_hSteamConnection = hConn;
     m_lastPacketTime = gpGlobals->realtime;
     m_deletionQueued = false;
@@ -59,46 +56,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_lo
     }
 
     IPaddress addr{};
-    if (coplay_forceloopback.GetBool())
-    {
-        addr.host = SDL_Swap32(INADDR_LOOPBACK);
-    }
-    // This else block is only really here because I havent tested the above on enough computers yet
-    else
-    {
-        IPaddress localaddresses[16];
-        int numlocal = SDLNet_GetLocalAddresses(localaddresses, sizeof(localaddresses) / sizeof(IPaddress));
-
-        // this is kind of a mess, from testing using 192.* addresses only work for some people that have only those...
-        for (int i = 0; i < numlocal; i++)
-        {
-            if (localaddresses[i].host == 0)
-                continue;
-            uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-            if (firstoctet == 127 || firstoctet == 172 || firstoctet == 192)
-                continue;
-            addr.host = localaddresses[i].host;
-        }
-
-        if (addr.host == 0)
-        {
-            Warning("[Coplay Warning] Didn't find a suitable local address! Trying the 192.* range..\n");
-            for (int i = 0; i < numlocal; i++)
-            {
-                if (localaddresses[i].host == 0)
-                    continue;
-                uint8 firstoctet = ((uint8*)&localaddresses[i].host)[0];
-                if (firstoctet == 127 || firstoctet == 172)//|| firstoctet == 192
-                    continue;
-                addr.host = localaddresses[i].host;
-            }
-        }
-        if (addr.host == 0)
-        {
-            Warning("[Coplay Warning] Still didn't find a suitable local address! Trying loopback..\n");
-            addr.host = SDL_Swap32(INADDR_LOOPBACK);
-        }
-    }
+    addr.host = SDL_Swap32(INADDR_LOOPBACK);
 
     if (m_role == eConnectionRole_CLIENT)
     {
@@ -138,6 +96,18 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn, int role) : m_lo
 
     std::string threadname = "coplayconnection_" + std::to_string(m_port);
     SetName(threadname.c_str());
+}
+
+void CCoplayConnection::ConnectToHost()
+{
+    ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
+	char cmd[128];
+    byte ipnum[4];
+	*(uint32*)(ipnum) = m_sendbackAddress.host;
+
+	// print out the IP address and port number
+	V_snprintf(cmd, sizeof(cmd), "connect %d.%d.%d.%d:%i", ipnum[0], ipnum[1], ipnum[2], ipnum[3], m_port);
+    engine->ClientCmd_Unrestricted(cmd);
 }
 
 int CCoplayConnection::Run()
@@ -190,16 +160,6 @@ int CCoplayConnection::Run()
         }
     }
 #endif 
-    if (!m_deletionQueued && m_role == eConnectionRole_CLIENT)
-    {
-        ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
-        std::string cmd;
-        uint32 ipnum = m_sendbackAddress.host;
-        // TODO - less gross formatting
-        cmd = "connect " + std::to_string(((uint8*)&ipnum)[0]) + '.' + std::to_string(((uint8*)&ipnum)[1]) + '.' +
-                std::to_string(((uint8*)&ipnum)[2]) + '.' + std::to_string(((uint8*)&ipnum)[3]) + ':' + std::to_string(m_port);
-        engine->ClientCmd_Unrestricted(cmd.c_str());
-    }
 
     while(!m_deletionQueued)
     {
