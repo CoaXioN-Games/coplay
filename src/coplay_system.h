@@ -4,6 +4,11 @@
  * file, You can obtain one at https://mozilla.org/MPL/2.0/.
  */
 
+//================================================
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
+// Author : Tholp / Jackson S
+//================================================
+
 #ifndef COPLAY_SYSTEM_H
 #define COPLAY_SYSTEM_H
 #pragma once
@@ -42,11 +47,15 @@ public:
     virtual void LevelInitPostEntity();
     virtual void LevelShutdownPreEntity();
 
+    ConnectionRole GetRole() { return m_role;  }
+    CCoplayClient* GetClient() {return &m_client; }
+    CCoplayHost*   GetHost() { return &m_host; }
+
+    CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_connect", CoplayConnect, "Connect to a Coplay game", FCVAR_NONE);
 private:
 	void SetRole(ConnectionRole role);
 	void ConnectToHost(CSteamID host);
 
-    CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_connect", CoplayConnect, "Connect to a Coplay game", FCVAR_NONE);
 
 private:
     STEAM_CALLBACK(CCoplaySystem, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);

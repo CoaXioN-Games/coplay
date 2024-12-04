@@ -1,3 +1,13 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+//================================================
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
+// Author : Tholp / Jackson S
+//================================================
 #include "cbase.h"
 #include "coplay_client.h"
 #include <inetchannel.h>
@@ -25,7 +35,6 @@ void CCoplayClient::ConnectToHost(CSteamID host)
 }
 
 extern ConVar coplay_use_lobbies;
-extern ConVar coplay_joinfilter;
 bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
     bool stateFailed = false;

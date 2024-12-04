@@ -1,3 +1,14 @@
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+//================================================
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
+// Author : Tholp / Jackson S
+//================================================
+
 #ifndef COPLAY_CLIENT_H
 #define COPLAY_CLIENT_H
 #pragma once

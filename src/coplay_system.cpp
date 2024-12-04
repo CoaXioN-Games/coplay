@@ -5,7 +5,7 @@
  */
 
 //================================================
-// CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
 //================================================
 
@@ -20,30 +20,6 @@
 std::string queuedcommand;
 static CCoplaySystem g_CoplaySystem;
 CCoplaySystem* CCoplaySystem::s_instance = nullptr;
-
-
-//void ChangeLobbyType(IConVar* var, const char* pOldValue, float flOldValue)
-//{
-//    ConVarRef joinfilter(var);
-//    if (!joinfilter.IsValid())
-//        return;
-//
-//    int filter = joinfilter.GetInt();
-//	CCoplaySystem* pCoplaySystem = CCoplaySystem::GetInstance();
-//
-//    if (pCoplaySystem && pCoplaySystem->GetLobby().IsLobby() && pCoplaySystem->GetLobby().IsValid())
-//        SteamMatchmaking()->SetLobbyType(pCoplaySystem->GetLobby(),
-//            (ELobbyType)(filter > -1 ? filter : 0));
-//}
-//
-//ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game? Will also call coplay_opensocket on server start if set above -1.\n"
-//                        "-1 : Off\n"
-//                        "0  : Invite Only\n"
-//                        "1  : Friends Only\n"
-//                        "2  : Anyone\n",
-//                        true, -1, true, 2
-//                        ,(FnChangeCallback_t)ChangeLobbyType // See the enum ELobbyType in isteammatchmaking.h
-//                         );
 
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
 ConVar coplay_debuglog_lobbyupdated("coplay_debuglog_lobbyupdated", "0", 0, "Prints when a lobby is created, joined or left.\n");
@@ -85,7 +61,7 @@ void CCoplaySystem::Shutdown()
 
 static void ConnectOverride(const CCommand& args)
 {
-    //CCoplaySystem::GetInstance()->CoplayConnect(args);
+    CCoplaySystem::GetInstance()->CoplayConnect(args);
 }
 
 void CCoplaySystem::PostInit()
@@ -94,10 +70,8 @@ void CCoplaySystem::PostInit()
     ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");// allows connecting to 127.* addresses
     net_usesocketsforloopback.SetValue(true);
 
-#ifndef COPLAY_DONT_SET_THREADMODE
-    ConVarRef host_thread_mode("host_thread_mode");// fixes game logic speedup, see the README for the required fix for this
-    host_thread_mode.SetValue(2);
-#endif
+    ConVarRef cl_clock_correction("cl_clock_correction");
+    cl_clock_correction.SetValue(false);
 
 	// replace the connect command with our own
     ConCommand* connectCommand = g_pCVar->FindCommand("connect");
@@ -288,7 +262,7 @@ void CCoplaySystem::PrintAbout(const CCommand& args)
 {
     ConColorMsg(COPLAY_MSG_COLOR, "Coplay allows P2P connections in sourcemods. Visit the Github page for more information and source code\n");
     ConColorMsg(COPLAY_MSG_COLOR, "https://github.com/CoaXioN-Games/coplay\n\n");
-    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\n\n", COPLAY_VERSION);
+    ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\nBuilt on %s at %s GMT-0.\n\n", COPLAY_VERSION, __DATE__, __TIME__);
 
     ConColorMsg(COPLAY_MSG_COLOR, "Active Coplay build options:\n");
 #ifdef COPLAY_DONT_UPDATE_RPC
@@ -300,9 +274,7 @@ void CCoplaySystem::PrintAbout(const CCommand& args)
 #ifdef COPLAY_DONT_LINK_SDL2_NET
     ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_DONT_LINK_SDL2_NET\n");
 #endif
-#ifdef COPLAY_DONT_SET_THREADMODE
-    ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_DONT_SET_THREADMODE\n");
-#endif
+
 }
 
 void CCoplaySystem::GetConnectCommand(const CCommand& args)

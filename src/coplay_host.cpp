@@ -1,9 +1,45 @@
-#include "cbase.h"
-#include "coplay.h"
-#include "coplay_host.h"
+/*
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at https://mozilla.org/MPL/2.0/.
+ */
+
+//================================================
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
+// Author : Tholp / Jackson S
+//================================================
+
+#include <cbase.h>
 #include <inetchannel.h>
 #include <inetchannelinfo.h>
+
+#include "coplay.h"
+#include "coplay_host.h"
 #include "coplay_connection.h"
+#include "coplay_system.h"
+
+void ChangeLobbyType(IConVar* var, const char* pOldValue, float flOldValue)
+{
+   ConVarRef joinfilter(var);
+   if (!joinfilter.IsValid())
+       return;
+
+   int filter = joinfilter.GetInt();
+    CCoplaySystem* pCoplaySystem = CCoplaySystem::GetInstance();
+
+   if (pCoplaySystem && pCoplaySystem->GetHost()->GetLobby().IsLobby() && pCoplaySystem->GetHost()->GetLobby().IsValid())
+       SteamMatchmaking()->SetLobbyType(pCoplaySystem->GetHost()->GetLobby(),
+           (ELobbyType)(filter > -1 ? filter : 0));
+}
+
+ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game? Will also call coplay_opensocket on server start if set above -1.\n"
+                       "-1 : Off\n"
+                       "0  : Invite Only\n"
+                       "1  : Friends Only\n"
+                       "2  : Anyone\n",
+                       true, -1, true, 2
+                       ,(FnChangeCallback_t)ChangeLobbyType // See the enum ELobbyType in isteammatchmaking.h
+                        );
 
 CCoplayHost::CCoplayHost() :
 	m_hSocket(k_HSteamListenSocket_Invalid),
@@ -17,7 +53,6 @@ CCoplayHost::~CCoplayHost()
 }
 
 extern ConVar coplay_use_lobbies;
-extern ConVar coplay_joinfilter;
 void CCoplayHost::StartHosting()
 {
     // ensure we're in a game
@@ -208,7 +243,7 @@ bool CCoplayHost::AddConnection(HSteamNetConnection hConnection)
 	}
 
 	// create a new connection
-    CCoplayConnection* connection = new CCoplayConnection(hConnection);
+	CCoplayConnection* connection = new CCoplayConnection(hConnection);
     connection->Start();
     m_connections.AddToTail(connection);
     return true;

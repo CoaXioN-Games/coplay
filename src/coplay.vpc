@@ -28,7 +28,6 @@ $Configuration
 		$PreprocessorDefinitions			"$BASE;COPLAY_DONT_UPDATE_RPC" [$COPLAY_DONT_UPDATE_RPC]
 		$PreprocessorDefinitions			"$BASE;COPLAY_DONT_LINK_SDL2" [$COPLAY_DONT_LINK_SDL2]
 		$PreprocessorDefinitions			"$BASE;COPLAY_DONT_LINK_SDL2_NET" [$COPLAY_DONT_LINK_SDL2_NET]
-		$PreprocessorDefinitions			"$BASE;COPLAY_DONT_SET_THREADMODE" [$COPLAY_DONT_SET_THREADMODE]
 	}
 
 	$Linker
@@ -47,8 +46,8 @@ $Project // "Coplay"
 					"$COPLAY_SRCDIR\coplay_system.cpp" \
 					"$COPLAY_SRCDIR\coplay_client.cpp" \
 					"$COPLAY_SRCDIR\coplay_host.cpp"
-					
-			
+
+
             $File	"$COPLAY_SRCDIR\coplay.h" \
 					"$COPLAY_SRCDIR\coplay_connection.h" \
 					"$COPLAY_SRCDIR\coplay_system.h" \

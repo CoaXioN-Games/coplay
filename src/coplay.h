@@ -5,7 +5,7 @@
  */
 
 //================================================
-// CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
 //================================================
 
@@ -34,7 +34,7 @@
 #define COPLAY_MAX_PACKETS 16
 
 //YYYY-MM-DD-(a-z) if theres multiple in a day
-#define COPLAY_VERSION "2024-07-26-a"
+#define COPLAY_VERSION "2024-12-02-a"
 
 #define COPLAY_NETMSG_NEEDPASS "NeedPass"
 #define COPLAY_NETMSG_OK "OK"

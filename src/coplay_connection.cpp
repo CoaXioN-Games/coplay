@@ -5,7 +5,7 @@
  */
 
 //================================================
-// CoaXioN Source SDK p2p networking: "CoaXioN Coplay"
+// CoaXioN Implementation of Steam P2P networking on Source SDK: "CoaXioN Coplay"
 // Author : Tholp / Jackson S
 //================================================
 
@@ -58,7 +58,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn) : m_localSocket(
     IPaddress addr{};
     addr.host = SDL_Swap32(INADDR_LOOPBACK);
 
-    if (m_role == eConnectionRole_CLIENT)
+    if (CCoplaySystem::GetInstance()->GetRole() == eConnectionRole_CLIENT)
     {
         ConVarRef clientport("clientport");
         addr.port = SDL_Swap16(clientport.GetInt());
