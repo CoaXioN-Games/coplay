@@ -31,7 +31,7 @@
 #define COPLAY_MSG_COLOR Color(170, 255, 0, 255)
 #define COPLAY_DEBUG_MSG_COLOR Color(255, 170, 0, 255)
 
-#define COPLAY_MAX_PACKETS 16
+#define COPLAY_MAX_PACKETS 8 // max packets proccessed in a single loop of running the connection.
 
 //YYYY-MM-DD-(a-z) if theres multiple in a day
 #define COPLAY_VERSION "2024-12-02-a"
@@ -53,7 +53,7 @@ enum JoinFilter
 enum ConnectionRole
 {
     eConnectionRole_UNAVAILABLE = -1,// Waiting on Steam
-    eConnectionRole_NOT_CONNECTED = 0,
+    eConnectionRole_INACTIVE = 0, // Coplay isnt doing anything right now
     eConnectionRole_HOST,
     eConnectionRole_CLIENT
 };

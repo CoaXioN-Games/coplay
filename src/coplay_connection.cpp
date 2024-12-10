@@ -15,7 +15,7 @@
 #include <inetchannel.h>
 #include <inetchannelinfo.h>
 
-ConVar coplay_timeoutduration("coplay_timeoutduration", "15", FCVAR_ARCHIVE);
+ConVar coplay_timeoutduration("coplay_timeoutduration", "30", FCVAR_ARCHIVE);
 ConVar coplay_portrange_begin("coplay_portrange_begin", "3600", FCVAR_ARCHIVE, "Where to start looking for ports to bind on, a range of atleast 64 is recomended.\n");
 ConVar coplay_portrange_end  ("coplay_portrange_end", "3700", FCVAR_ARCHIVE, "Where to stop looking for ports to bind on, a range of atleast 64 is recomended.\n");
 
@@ -106,18 +106,18 @@ void CCoplayConnection::ConnectToHost()
 	*(uint32*)(ipnum) = m_sendbackAddress.host;
 
 	// print out the IP address and port number
-	V_snprintf(cmd, sizeof(cmd), "connect %d.%d.%d.%d:%i", ipnum[0], ipnum[1], ipnum[2], ipnum[3], m_port);
+	V_snprintf(cmd, sizeof(cmd), "connect %d.%d.%d.%d:%i coplay", ipnum[0], ipnum[1], ipnum[2], ipnum[3], m_port);
+	Msg("%s\n", cmd);
     engine->ClientCmd_Unrestricted(cmd);
 }
 
 int CCoplayConnection::Run()
 {
-    // TODO - can we get the MTU??
-    ConVarRef net_maxroutable("net_maxroutable");
+    ConVarRef net_maxroutable("net_maxroutable"); // Defaults to min( 1260, MTU ), i think.
     m_timeStarted = gpGlobals->realtime;
+    m_lastPacketTime = gpGlobals->realtime;
     UDPpacket **LocalInboundPackets = SDLNet_AllocPacketV(COPLAY_MAX_PACKETS, net_maxroutable.GetInt());
 
-    // TODO - what is meant by "COPLAY_MAX_PACKETS"? how was the number determined?
     SteamNetworkingMessage_t *InboundSteamMessages[COPLAY_MAX_PACKETS];
     UDPpacket SteamPacket;
 
@@ -189,11 +189,6 @@ int CCoplayConnection::Run()
             Msg("OUTBOUND START");
         }
         numSDLRecv = SDLNet_UDP_RecvV(m_localSocket, LocalInboundPackets);
-        //numSDLRecv = SDLNet_UDP_Recv(m_localSocket, LocalInboundPackets[0]);
-        if (coplay_debuglog_scream.GetBool())
-        {
-            Msg("OUTBOUND END\n");
-        }
 
         if( numSDLRecv > 0 && coplay_debuglog_socketspam.GetBool())
         {
@@ -206,15 +201,19 @@ int CCoplayConnection::Run()
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
         }
 
-        // TODO - should this be an uint8? overflow
-        for (uint8 j = 0; j < numSDLRecv; j++)
+        for (uint j = 0; j < numSDLRecv; j++)
         {
             SteamNetworkingSockets()->SendMessageToConnection(m_hSteamConnection, (const void*)LocalInboundPackets[j]->data,
-                                                                            LocalInboundPackets[j]->len,
-                                                                            k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
-                                                                            &messageOut);//use unreliable mode, source already handles it, dont do double duty for no reason
+                                                              LocalInboundPackets[j]->len,
+                                                              k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
+                                                              &messageOut);//use unreliable mode, source already handles it, dont do double duty for no reason
             //if (coplay_debuglog_socketspam.GetBool())
             //    ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Result %i\n", result);
+        }
+
+        if (coplay_debuglog_scream.GetBool())
+        {
+            Msg("OUTBOUND END\n");
         }
 
         //Inbound from SDR
@@ -232,7 +231,7 @@ int CCoplayConnection::Run()
         }
 
 
-        for (uint8 j = 0; j < numSteamRecv; j++)
+        for (int j = 0; j < numSteamRecv; j++)
         {
             SteamPacket.data = (uint8*)InboundSteamMessages[j]->GetData();
             SteamPacket.len  = InboundSteamMessages[j]->GetSize();
@@ -243,13 +242,15 @@ int CCoplayConnection::Run()
             }
         }
 
-        for (uint8 j = 0; j < numSteamRecv; j++)
+        for (int j = 0; j < numSteamRecv; j++)
         {
             InboundSteamMessages[j]->Release();
         }
 
         if (m_lastPacketTime + coplay_timeoutduration.GetFloat() < gpGlobals->realtime)
         {
+            if (coplay_debuglog_socketcreation.GetBool())
+                ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket with port %i timed out.\n", m_port);
             QueueForDeletion();
         }
     }
@@ -261,7 +262,8 @@ int CCoplayConnection::Run()
 
     if (coplay_debuglog_socketcreation.GetBool())
     {
-        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket closed with port %i.\n", m_port);
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Socket with port %i closed.\n", m_port);
     }
+
     return 0;
 }

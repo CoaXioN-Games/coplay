@@ -15,6 +15,7 @@
 
 #include "steam/isteamnetworkingsockets.h"
 #include "steam/isteamnetworkingutils.h"
+#include "steam/isteammatchmaking.h"
 
 class CCoplayConnection;
 class CCoplayHost
@@ -32,11 +33,17 @@ public:
 	bool IsHosting() const { return m_hSocket != k_HSteamListenSocket_Invalid; }
 
 	void RandomizePasscode();
+	std::string GetPasscode(){ return m_passcode; }
 
 	CSteamID GetLobby() { return m_lobby; }
+	int GetConnectionCount(){return m_connections.Count();}
 
 private:
 	bool AddConnection(HSteamNetConnection hConnection);
+	void RemoveConnection(HSteamNetConnection hConnection, int reason, const char *pszDebug, bool bEnableLinger);
+
+private:
+	STEAM_CALLBACK(CCoplayHost, LobbyCreated,            LobbyCreated_t);
 
 private:
 	HSteamListenSocket	m_hSocket;
@@ -44,7 +51,7 @@ private:
 
 	bool				m_usingPassword;
 	CSteamID			m_lobby;
-	std::string			m_password;
+	std::string			m_passcode;
 };
 
 #endif // COPLAY_HOST_H

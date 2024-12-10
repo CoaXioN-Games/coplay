@@ -137,10 +137,8 @@ void CCoplayHost::Update()
 	// check our threads for deletion
 	FOR_EACH_VEC_BACK(m_connections, i)
 	{
-		if (m_connections[i]->IsAlive())
+		if (!m_connections[i]->IsAlive())
 		{
-			m_connections[i]->Join();
-			delete m_connections[i];
 			m_connections.Remove(i);
 		}
 	}
@@ -149,6 +147,7 @@ void CCoplayHost::Update()
 bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
 	bool stateFailed = false;
+	//Msg("%i\n", pParam->m_info.m_eState);
     // Somehow left without us catching it, map transistion load error or cancelation probably
     if (!engine->IsConnected() || !IsHosting())
     {
@@ -178,18 +177,18 @@ bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallbac
                 if (SteamFriends()->HasFriend(pParam->m_info.m_identityRemote.GetSteamID(), k_EFriendFlagImmediate))
                     SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);
                 else
-                    SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotFriend, "", true);
+                    RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotFriend, "accessdeny", true);
                 break;
 
             // This is for passwords, we cant get the password before making a connection so dont make a CCoplayConnection until we get it
             // Connections in PendingConnections are run in CCoplaySystem::Update() waiting to recieve it
             case eP2PFilter_CONTROLLED:
-				// Create pending connection
+                //TODO: Create pending connection
                 break;
 
 			// sent something that we dont know how to handle
             default:
-                SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "", true);
+                RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotOpen, "unexpectedfilter", true);
                 break;
             }
         }
@@ -198,16 +197,16 @@ bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallbac
     case k_ESteamNetworkingConnectionState_Connected:
 		// add the connection to our list
         if (!AddConnection(pParam->m_hConn))
-            SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "", true);
+            RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "failedlocalconnection", true);
         break;
 
+    // Theres no actual network activity here but we need to clean it up
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-		// tell the client to disconnect
-        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", true);
-		// todo check if this is a valid path for the host
+        RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "timeout", true);
+
+        break;
     case k_ESteamNetworkingConnectionState_ClosedByPeer:
-        StopHosting();
-		stateFailed = true;
+        RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_ClosedByPeer, "peerclosed", true);
         break;
     }
 
@@ -217,16 +216,19 @@ bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallbac
 void CCoplayHost::RandomizePasscode()
 {
     static const std::string validchars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    m_password.clear();
+    m_passcode.clear();
     for (int i = 0; i < 32; i++)
-        m_password += validchars[rand() % validchars.length()];
+        m_passcode += validchars[rand() % validchars.length()];
 }
 
 bool CCoplayHost::AddConnection(HSteamNetConnection hConnection)
 {
     SteamNetConnectionInfo_t newinfo;
     if (!SteamNetworkingSockets()->GetConnectionInfo(hConnection, &newinfo))
+    {
+        ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] Couldn't make a new connection\n");
         return false;
+    }
 
 	// delete any existing connections from the same user
 	FOR_EACH_VEC_BACK(m_connections, i)
@@ -247,4 +249,22 @@ bool CCoplayHost::AddConnection(HSteamNetConnection hConnection)
     connection->Start();
     m_connections.AddToTail(connection);
     return true;
+}
+
+void CCoplayHost::RemoveConnection(HSteamNetConnection hConnection, int reason, const char *pszDebug, bool bEnableLinger)
+{
+    FOR_EACH_VEC(m_connections, i)
+    {
+        if (m_connections[i]->m_hSteamConnection == hConnection)
+        {
+            m_connections[i]->QueueForDeletion();
+            break;
+        }
+    }
+    SteamNetworkingSockets()->CloseConnection(hConnection, reason, pszDebug, bEnableLinger);
+}
+
+void CCoplayHost::LobbyCreated(LobbyCreated_t *pParam)
+{
+    m_lobby = pParam->m_ulSteamIDLobby;
 }

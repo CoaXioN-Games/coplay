@@ -52,37 +52,44 @@ public:
     CCoplayHost*   GetHost() { return &m_host; }
 
     CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_connect", CoplayConnect, "Connect to a Coplay game", FCVAR_NONE);
+
+    std::string GetConnectCommand();
 private:
 	void SetRole(ConnectionRole role);
 	void ConnectToHost(CSteamID host);
+	void OnListLobbiesCmd(LobbyMatchList_t *pLobbyMatchList, bool IOFailure);
 
 
 private:
+    // Callbacks
     STEAM_CALLBACK(CCoplaySystem, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
     STEAM_CALLBACK(CCoplaySystem, LobbyJoined,             LobbyEnter_t);
+    STEAM_CALLBACK(CCoplaySystem, LobbyJoinRequested,      GameLobbyJoinRequested_t);
+    STEAM_CALLBACK(CCoplaySystem, JoinGame,                GameRichPresenceJoinRequested_t);
 
-#if 0
+    CCallResult< CCoplaySystem, LobbyMatchList_t> m_lobbyListResult;
+
+private:
     // Commands
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_opensocket", OpenSocket, "Manually (re)open your game to P2P connections", FCVAR_NONE);
     CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_closesocket", CloseSocket, "Manually close your game to P2P connections", FCVAR_NONE);
     CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_listlobbies", ListLobbies, "List all joinable lobbies", FCVAR_NONE);
 
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_about", PrintAbout, "", FCVAR_NONE);
-	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_getconnectcommand", GetConnectCommand, "Prints a command for other people to join you", FCVAR_NONE);
+	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_invite", InvitePlayer, "Prints a command for other people to join you", FCVAR_NONE);
+#if 0
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_rerandomize_password", ReRandomizePassword, "Randomizes the password given by coplay_getconnectcommand", FCVAR_NONE);
     CON_COMMAND_MEMBER_F(CCoplaySystem, "connect_lobby", ConnectToLobby, "", FCVAR_HIDDEN);
-    CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_invite", InviteToLobby, "", FCVAR_NONE);
-
+#endif
 	// Debug commands
-	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_debug_printstate", DebugPrintState, "", FCVAR_NONE);
+	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_status", PrintStatus, "", FCVAR_NONE);
+#if 0
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_debug_createdummyconnection", DebugCreateDummyConnection, "Create a empty connection", FCVAR_DEVELOPMENTONLY);
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_debug_senddummy_steam", DebugSendDummySteam, "", FCVAR_CLIENTDLL);
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_listinterfaces", ListInterfaces, "", FCVAR_CLIENTDLL);
 
 private:
-    STEAM_CALLBACK(CCoplaySystem, JoinGame,                GameRichPresenceJoinRequested_t);
-    STEAM_CALLBACK(CCoplaySystem, LobbyCreated,            LobbyCreated_t);
-    STEAM_CALLBACK(CCoplaySystem, LobbyJoinRequested,      GameLobbyJoinRequested_t);
+
 #endif
 
 private:

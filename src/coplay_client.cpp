@@ -28,7 +28,7 @@ void CCoplayClient::ConnectToHost(CSteamID host)
         CloseConnection();
 
     SteamNetworkingIdentity netID;
-    SteamNetworkingSockets()->GetIdentity(&netID);
+    netID.SetSteamID(host);
 
     ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
     SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
@@ -38,6 +38,7 @@ extern ConVar coplay_use_lobbies;
 bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
     bool stateFailed = false;
+    //Msg("%i\n", pParam->m_info.m_eState);
     switch (pParam->m_info.m_eState)
     {
     case k_ESteamNetworkingConnectionState_Connecting:
@@ -57,7 +58,11 @@ bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
         break;
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
-        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "", true);
+        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "timeout", true);
+        CloseConnection();
+        stateFailed = true;
+        break;
+
     case k_ESteamNetworkingConnectionState_ClosedByPeer:
         CloseConnection();
 		stateFailed = true;
@@ -74,7 +79,6 @@ bool CCoplayClient::CreateConnection(HSteamNetConnection hConnection)
         return false;
 
     CloseConnection();
-    ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Connecting to server...\n");
     m_pConnection = new CCoplayConnection(hConnection);
     m_pConnection->ConnectToHost();
 	m_pConnection->Start();
