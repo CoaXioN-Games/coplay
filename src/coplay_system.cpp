@@ -59,11 +59,21 @@ bool CCoplaySystem::Init()
 
 void CCoplaySystem::Shutdown()
 {
+    SetRole(eConnectionRole_INACTIVE);
 }
 
 static void ConnectOverride(const CCommand& args)
 {
     CCoplaySystem::GetInstance()->CoplayConnect(args);
+}
+
+FnCommandCallback_t g_oldDisconnectCallback;
+static void DisconnectOverride(const CCommand& args)
+{
+    g_oldDisconnectCallback(args);
+    if (CCoplaySystem::GetInstance()->GetRole() == eConnectionRole_CLIENT)
+        CCoplaySystem::GetInstance()->GetClient()->CloseConnection();
+
 }
 
 void CCoplaySystem::PostInit()
@@ -76,14 +86,21 @@ void CCoplaySystem::PostInit()
     cl_clock_correction.SetValue(false);
 
 	// replace the connect command with our own
-    ConCommand* connectCommand = g_pCVar->FindCommand("connect");
-    if (!connectCommand)
-        return;
+	ConCommand *connectCommand = g_pCVar->FindCommand("connect");
+	if (connectCommand)
+	{
+		// member variable offset magic
+		// this offset should be the same on the SP, MP and Alien Swarm branches. If you're on something older sorry.
+		m_oldConnectCallback = *(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18);
+		*(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18) = ConnectOverride;
+	}
+	ConCommand *disconnectCommand = g_pCVar->FindCommand("disconnect");
+	if (disconnectCommand)
+	{
+		g_oldDisconnectCallback = *(FnCommandCallback_t*)((intptr_t)(disconnectCommand)+0x18);
+		*(FnCommandCallback_t*)((intptr_t)(disconnectCommand)+0x18) = DisconnectOverride;
+	}
 
-	// member variable offset magic
-	// this offset should be the same on the SP, MP and Alien Swarm branches. If you're on something older sorry.
-	m_oldConnectCallback = *(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18);
-	*(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18) = ConnectOverride;
 }
 
 void CCoplaySystem::Update(float frametime)
@@ -383,7 +400,7 @@ void CCoplaySystem::PrintStatus(const CCommand& args)
     if (m_role == eConnectionRole_CLIENT)
     {
         role = "Client";
-        count = GetClient()->IsConnected();
+        count = GetClient()->IsConnected() ? 1 : 0;
     }
     else if (m_role == eConnectionRole_HOST)
     {
