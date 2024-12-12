@@ -17,6 +17,8 @@
 #include "steam/isteamnetworkingutils.h"
 #include "steam/isteammatchmaking.h"
 
+// TODO: the way we use lobbies is pretty much for enumeration only, offer a way to override default behavior
+
 class CCoplayConnection;
 class CCoplayHost
 {

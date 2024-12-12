@@ -23,7 +23,7 @@ CCoplaySystem* CCoplaySystem::s_instance = nullptr;
 
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
 ConVar coplay_debuglog_lobbyupdated("coplay_debuglog_lobbyupdated", "0", 0, "Prints when a lobby is created, joined or left.\n");
-ConVar coplay_use_lobbies("coplay_use_lobbies", "0", 0, "Use Steam Lobbies for connections.\n");
+ConVar coplay_use_lobbies("coplay_use_lobbies", "0", FCVAR_HIDDEN, "Use Steam Lobbies for connections.\n");
 ConVar coplay_autoopen("coplay_autoopen", "1", FCVAR_ARCHIVE, "Open game for listening on local server start");
 extern ConVar coplay_joinfilter;
 
@@ -45,7 +45,7 @@ bool CCoplaySystem::Init()
 
     if (SDL_Init(0))
     {
-        Error("SDL Failed to Initialize: \"%s\"", SDL_GetError());
+        Error("SDL Failed o Initialize: \"%s\"", SDL_GetError());
     }
 
     if (SDLNet_Init())
@@ -106,7 +106,7 @@ void CCoplaySystem::PostInit()
 void CCoplaySystem::Update(float frametime)
 {
     SteamAPI_RunCallbacks();
-    m_host.Update();
+    GetHost()->Update();
 }
 
 void CCoplaySystem::LevelInitPostEntity()
@@ -139,10 +139,10 @@ void CCoplaySystem::SetRole(ConnectionRole role)
     switch(m_role)
     {
 	case eConnectionRole_HOST:
-		m_host.StopHosting();
+		GetHost()->StopHosting();
 		break;
 	case eConnectionRole_CLIENT:
-		m_client.CloseConnection();
+		GetClient()->CloseConnection();
 		break;
     default:
         break;
@@ -152,7 +152,7 @@ void CCoplaySystem::SetRole(ConnectionRole role)
     switch (role)
     {
 	case eConnectionRole_HOST:
-		m_host.StartHosting();
+		GetHost()->StartHosting();
 		break;
     }
 
@@ -162,7 +162,7 @@ void CCoplaySystem::SetRole(ConnectionRole role)
 void CCoplaySystem::ConnectToHost(CSteamID host)
 {
 	SetRole(eConnectionRole_CLIENT);
-	m_client.ConnectToHost(host);
+	GetClient()->ConnectToHost(host);
 }
 
 void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
@@ -171,10 +171,10 @@ void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
     switch(m_role)
     {
 	case eConnectionRole_HOST:
-        stateFailed = m_host.ConnectionStatusUpdated(pParam);
+		stateFailed = GetHost()->ConnectionStatusUpdated(pParam);
 		break;
 	case eConnectionRole_CLIENT:
-        stateFailed = m_client.ConnectionStatusUpdated(pParam);
+		stateFailed = GetClient()->ConnectionStatusUpdated(pParam);
 		break;
 	default:
 		break;
@@ -187,7 +187,8 @@ void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
 
 void CCoplaySystem::LobbyJoined(LobbyEnter_t* pParam)
 {
-    if (pParam->m_EChatRoomEnterResponse != k_EChatRoomEnterResponseSuccess)
+    if (pParam->m_EChatRoomEnterResponse != k_EChatRoomEnterResponseSuccess
+        || GetRole() == eConnectionRole_HOST)
         return;
 
 	// we've joined the lobby so attempt to connect to the host

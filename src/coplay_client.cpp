@@ -28,7 +28,13 @@ void CCoplayClient::ConnectToHost(CSteamID host)
         CloseConnection();
 
     SteamNetworkingIdentity netID;
-    netID.SetSteamID(host);
+    if (host.IsLobby())
+    {
+        m_hostLobby = host;
+        netID.SetSteamID(SteamMatchmaking()->GetLobbyOwner(host));
+    }
+    else
+        netID.SetSteamID(host);
 
     ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
     SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);

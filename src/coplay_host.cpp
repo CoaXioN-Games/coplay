@@ -142,6 +142,15 @@ void CCoplayHost::Update()
 			m_connections.Remove(i);
 		}
 	}
+
+	if (coplay_use_lobbies.GetBool())
+	{
+		ConVarRef hostname("hostname");
+		SteamMatchmaking()->SetLobbyData(m_lobby, "hostname", hostname.GetString());
+		char mapname[32];
+		V_StrSlice(engine->GetLevelName(), 5, -4, mapname, sizeof(mapname));
+		SteamMatchmaking()->SetLobbyData(m_lobby, "map",  mapname);
+	}
 }
 
 bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
