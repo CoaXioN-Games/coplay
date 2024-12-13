@@ -28,6 +28,13 @@
 #include <string>
 #include "tier0/valve_minmax_on.h"
 
+#ifdef COPLAY_USE_LOBBIES
+extern ConVar coplay_use_lobbies;
+#define UseCoplayLobbies() coplay_use_lobbies.GetBool()
+#else
+#define UseCoplayLobbies() false
+#endif
+
 #define COPLAY_MSG_COLOR Color(170, 255, 0, 255)
 #define COPLAY_DEBUG_MSG_COLOR Color(255, 170, 0, 255)
 
@@ -38,6 +45,7 @@
 
 #define COPLAY_NETMSG_NEEDPASS "NeedPass"
 #define COPLAY_NETMSG_OK "OK"
+
 
 enum JoinFilter
 {

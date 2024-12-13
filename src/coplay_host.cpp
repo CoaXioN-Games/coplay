@@ -52,7 +52,6 @@ CCoplayHost::~CCoplayHost()
 {
 }
 
-extern ConVar coplay_use_lobbies;
 void CCoplayHost::StartHosting()
 {
     // ensure we're in a game
@@ -85,7 +84,7 @@ void CCoplayHost::StartHosting()
 	// create a listen socket
     m_hSocket = SteamNetworkingSockets()->CreateListenSocketP2P(0, 0, NULL);
 
-    if (coplay_use_lobbies.GetBool())
+    if (UseCoplayLobbies())
     {
 		// open a lobby with the appropriate settings
         SteamMatchmaking()->LeaveLobby(m_lobby);
@@ -118,7 +117,7 @@ void CCoplayHost::StopHosting()
 	}
 
 	// shutdown the lobby
-	if (coplay_use_lobbies.GetBool() && m_lobby != k_steamIDNil)
+	if (UseCoplayLobbies() && m_lobby != k_steamIDNil)
 	{
 		SteamMatchmaking()->LeaveLobby(m_lobby);
 		m_lobby.Clear();
@@ -143,7 +142,7 @@ void CCoplayHost::Update()
 		}
 	}
 
-	if (coplay_use_lobbies.GetBool())
+	if (UseCoplayLobbies())
 	{
 		ConVarRef hostname("hostname");
 		SteamMatchmaking()->SetLobbyData(m_lobby, "hostname", hostname.GetString());
@@ -168,7 +167,7 @@ bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallbac
     {
     case k_ESteamNetworkingConnectionState_Connecting:
 		// lobbies filter for us already, so we can just accept the connection
-        if (coplay_use_lobbies.GetBool())
+		if (UseCoplayLobbies())
         {
             if (IsUserInLobby(m_lobby, pParam->m_info.m_identityRemote.GetSteamID()))
                 SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn);

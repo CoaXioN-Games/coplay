@@ -21,9 +21,12 @@ std::string queuedcommand;
 static CCoplaySystem g_CoplaySystem;
 CCoplaySystem* CCoplaySystem::s_instance = nullptr;
 
+#ifdef COPLAY_USE_LOBBIES
+// This is mostly a convar for easier testing, dont set the COPLAY_USE_LOBBIES conditional in your vpc if you want this off
+ConVar coplay_use_lobbies("coplay_use_lobbies", "1", FCVAR_HIDDEN, "Use Steam Lobbies for connections.\n");
+#endif
 ConVar coplay_debuglog_steamconnstatus("coplay_debuglog_steamconnstatus", "0", 0, "Prints more detailed steam connection statuses.\n");
 ConVar coplay_debuglog_lobbyupdated("coplay_debuglog_lobbyupdated", "0", 0, "Prints when a lobby is created, joined or left.\n");
-ConVar coplay_use_lobbies("coplay_use_lobbies", "0", FCVAR_HIDDEN, "Use Steam Lobbies for connections.\n");
 ConVar coplay_autoopen("coplay_autoopen", "1", FCVAR_ARCHIVE, "Open game for listening on local server start");
 extern ConVar coplay_joinfilter;
 
@@ -45,7 +48,7 @@ bool CCoplaySystem::Init()
 
     if (SDL_Init(0))
     {
-        Error("SDL Failed o Initialize: \"%s\"", SDL_GetError());
+        Error("SDL Failed to Initialize: \"%s\"", SDL_GetError());
     }
 
     if (SDLNet_Init())
@@ -272,7 +275,7 @@ void CCoplaySystem::CoplayConnect(const CCommand& args)
 
     uint64 id = std::stoull(destination);
     CSteamID steamid(id);
-    if (coplay_use_lobbies.GetBool() && steamid.IsLobby())
+    if (UseCoplayLobbies() && steamid.IsLobby())
     {
 		// we have to join the lobby before we can connect to the host
 		ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting to join lobby with ID %s....\n", destination.c_str());
@@ -347,7 +350,7 @@ std::string CCoplaySystem::GetConnectCommand()
 
 
     uint64 id;
-    if (coplay_use_lobbies.GetBool())
+    if (UseCoplayLobbies())
     {
         id = GetHost()->GetLobby().ConvertToUint64();
     }
@@ -358,7 +361,7 @@ std::string CCoplaySystem::GetConnectCommand()
         id = netID.GetSteamID64();
     }
 
-    if (coplay_joinfilter.GetInt() == eP2PFilter_CONTROLLED && !coplay_use_lobbies.GetBool())
+    if (coplay_joinfilter.GetInt() == eP2PFilter_CONTROLLED && !UseCoplayLobbies())
         cmd = "coplay_connect " + std::to_string(id) + " " + GetHost()->GetPasscode();
     else
         cmd = "coplay_connect " + std::to_string(id);
@@ -369,13 +372,13 @@ std::string CCoplaySystem::GetConnectCommand()
 void CCoplaySystem::InvitePlayer(const CCommand& args)
 {
     if (m_role != eConnectionRole_HOST
-        || (coplay_use_lobbies.GetBool() && GetHost()->GetLobby().ConvertToUint64() == 0) )
+        || (UseCoplayLobbies() && GetHost()->GetLobby().ConvertToUint64() == 0) )
     {
         ConColorMsg(COPLAY_MSG_COLOR, "You're not currently hosting a game joinable by Coplay.\n");
         return;
     }
 
-    if (coplay_use_lobbies.GetBool() && coplay_joinfilter.GetInt() != eP2PFilter_EVERYONE)
+    if (UseCoplayLobbies() && coplay_joinfilter.GetInt() != eP2PFilter_EVERYONE)
     {
         if (GetHost()->GetLobby().ConvertToUint64() == 0)
         {

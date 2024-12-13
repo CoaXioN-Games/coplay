@@ -63,10 +63,15 @@ private:
 private:
     // Callbacks
     STEAM_CALLBACK(CCoplaySystem, ConnectionStatusUpdated, SteamNetConnectionStatusChangedCallback_t);
+    STEAM_CALLBACK(CCoplaySystem, JoinGame,                GameRichPresenceJoinRequested_t);
+#ifdef COPLAY_USE_LOBBIES
     STEAM_CALLBACK(CCoplaySystem, LobbyJoined,             LobbyEnter_t);
     STEAM_CALLBACK(CCoplaySystem, LobbyJoinRequested,      GameLobbyJoinRequested_t);
-    STEAM_CALLBACK(CCoplaySystem, JoinGame,                GameRichPresenceJoinRequested_t);
-
+#else
+    // So you can still call into these if you want to for some reason
+    void LobbyJoined(LobbyEnter_t* pParam);
+    void LobbyJoinRequested(GameLobbyJoinRequested_t *pParam);
+#endif
     CCallResult< CCoplaySystem, LobbyMatchList_t> m_lobbyListResult;
 
 private:

@@ -40,7 +40,6 @@ void CCoplayClient::ConnectToHost(CSteamID host)
     SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
 }
 
-extern ConVar coplay_use_lobbies;
 bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
     bool stateFailed = false;
@@ -55,7 +54,7 @@ bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
         if (!CreateConnection(pParam->m_hConn))
         {
             SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "", true);
-            if (coplay_use_lobbies.GetBool())
+            if (UseCoplayLobbies())
             {
                 SteamMatchmaking()->LeaveLobby(m_hostLobby);
                 m_hostLobby.Clear();

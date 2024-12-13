@@ -129,7 +129,6 @@ int CCoplayConnection::Run()
     // TEMP IF TEMP IF TEMP IF
     // FIX ME FIX ME FIX ME
 #if 0
-	extern ConVar coplay_use_lobbies;
     if (!coplay_use_lobbies.GetBool())
     {
         // see if the server needs a password and wait till we're told we will be let in to start forwarding stuff
