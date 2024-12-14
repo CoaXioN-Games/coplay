@@ -93,7 +93,7 @@ void CCoplaySystem::PostInit()
 	if (connectCommand)
 	{
 		// member variable offset magic
-		// this offset should be the same on the SP, MP and Alien Swarm branches. If you're on something older sorry.
+		// this offset should be the same on the SP, MP and Alien Swarm branches. If you're on something older, sorry.
 		m_oldConnectCallback = *(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18);
 		*(FnCommandCallback_t*)((intptr_t)(connectCommand)+0x18) = ConnectOverride;
 	}

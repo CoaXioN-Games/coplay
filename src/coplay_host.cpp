@@ -76,10 +76,13 @@ void CCoplayHost::StartHosting()
 
     ConVarRef sv_lan("sv_lan");
     ConVarRef engine_no_focus_sleep("engine_no_focus_sleep");
+    ConVarRef cl_clock_correction("cl_clock_correction");
     //sv_lan off will heartbeat the server and allow clients to see our ip
     sv_lan.SetValue("1");
     // stops everyone lagging out when the host unfocuses the game
     engine_no_focus_sleep.SetValue("0"); 
+    // weird pacing issues when using loopback sockets otherwise
+    cl_clock_correction.SetValue(false);
 
 	// create a listen socket
     m_hSocket = SteamNetworkingSockets()->CreateListenSocketP2P(0, 0, NULL);
@@ -125,7 +128,10 @@ void CCoplayHost::StopHosting()
 
 	// reset convars
     ConVarRef engine_no_focus_sleep("engine_no_focus_sleep");
+    ConVarRef cl_clock_correction("cl_clock_correction");
+
     engine_no_focus_sleep.SetValue(engine_no_focus_sleep.GetDefault());
+    cl_clock_correction.SetValue(cl_clock_correction.GetDefault());
 }
 
 void CCoplayHost::Update()
