@@ -85,9 +85,6 @@ void CCoplaySystem::PostInit()
     ConVarRef net_usesocketsforloopback("net_usesocketsforloopback");// allows connecting to 127.* addresses
     net_usesocketsforloopback.SetValue(true);
 
-    ConVarRef cl_clock_correction("cl_clock_correction");
-    cl_clock_correction.SetValue(false);
-
 	// replace the connect command with our own
 	ConCommand *connectCommand = g_pCVar->FindCommand("connect");
 	if (connectCommand)
