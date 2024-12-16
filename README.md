@@ -58,31 +58,6 @@ After you might have done that you can:
 3. Rerun your VPC script and build. Any remaining errors are up to you to fix but the SDK doesn't have many by default.
 
 
-### Fix host_thread_mode
-Coplay enables this convar on start. Due to an engine bug, locally hosted servers will sometimes run faster than intended. host_thread_mode 2 fixes this but causes inputs by the host player to be discarded because of a desync.
-This can be side-stepped by changing this statement in player.cpp CBasePlayer::IsUserCmdDataValid() from
-```
-bool bValid = ( pCmd->tick_count >= nMinDelta && pCmd->tick_count < nMaxDelta ) &&
-				  // Prevent clients from sending invalid view angles to try to get leaf server code to crash
-				  ( pCmd->viewangles.IsValid() && IsEntityQAngleReasonable( pCmd->viewangles ) ) &&
-				  // Movement ranges
-				  ( IsFinite( pCmd->forwardmove ) && IsEntityCoordinateReasonable( pCmd->forwardmove ) ) &&
-				  ( IsFinite( pCmd->sidemove ) && IsEntityCoordinateReasonable( pCmd->sidemove ) ) &&
-				  ( IsFinite( pCmd->upmove ) && IsEntityCoordinateReasonable( pCmd->upmove ) );
-```
-to
-```
-// when using host_thread_mode 1 or 2 on a listen server the client and server tickcount get desynced resulting in none of the hosts usermsgs getting accepted
-// this first || fixes that and doesnt seem to do anything else as far as i can tell; Tholp
-    bool bValid = ((!engine->IsDedicatedServer() && entindex() == 1) || ( pCmd->tick_count >= nMinDelta && pCmd->tick_count < nMaxDelta )) &&
-				  // Prevent clients from sending invalid view angles to try to get leaf server code to crash
-				  ( pCmd->viewangles.IsValid() && IsEntityQAngleReasonable( pCmd->viewangles ) ) &&
-				  // Movement ranges
-				  ( IsFinite( pCmd->forwardmove ) && IsEntityCoordinateReasonable( pCmd->forwardmove ) ) &&
-				  ( IsFinite( pCmd->sidemove ) && IsEntityCoordinateReasonable( pCmd->sidemove ) ) &&
-				  ( IsFinite( pCmd->upmove ) && IsEntityCoordinateReasonable( pCmd->upmove ) );
-```
-
 ## Adding Coplay
 
 1. First Either clone Coplay as a git submodule, or download it as a zip then place it into the root of your mod's source( Where folders such as `devtools`, `game` and `public` are. )
@@ -105,7 +80,6 @@ to it somewhere at the top.
 | COPLAY_DONT_UPDATE_RPC | Disables Coplay updating Steam Rich Presence, if you would rather use your own implementation. |
 | COPLAY_DONT_LINK_SDL2 |  Disables Coplay's linking to SDL2, for if you already bind to it elsewhere. |
 | COPLAY_DONT_LINK_SDL2_NET | Same as above but for SDL2_net. |
-| $COPLAY_DONT_SET_THREADMODE | Disables automatically setting host_thread_mode, may be removed later if a better solution for server pacing issues is found |
 
 To use these options place `$Conditional OPTION_NAME "1"` above the Coplay `$Include` for each one you want to enable. ( ex.`$Conditional COPLAY_USE_LOBBIES "1"` )
 
