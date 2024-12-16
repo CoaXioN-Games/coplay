@@ -200,7 +200,7 @@ int CCoplayConnection::Run()
             ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Debug] SDL Error! %s\n", SDLNet_GetError());
         }
 
-        for (uint j = 0; j < numSDLRecv; j++)
+        for (int j = 0; j < numSDLRecv; j++)
         {
             SteamNetworkingSockets()->SendMessageToConnection(m_hSteamConnection, (const void*)LocalInboundPackets[j]->data,
                                                               LocalInboundPackets[j]->len,

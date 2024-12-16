@@ -107,6 +107,33 @@ void CCoplaySystem::Update(float frametime)
 {
     SteamAPI_RunCallbacks();
     GetHost()->Update();
+
+#ifndef COPLAY_DONT_UPDATE_RPC
+
+    // Connect info
+    static float lastupdated = 0;
+    if (lastupdated + 1 < gpGlobals->realtime)
+    {
+        if (GetHost()->IsHosting() && coplay_joinfilter.GetInt() != eP2PFilter_CONTROLLED)
+        {
+            std::string connect = "+" + GetConnectCommand();
+            SteamFriends()->SetRichPresence("connect", connect.c_str());
+            SteamFriends()->SetRichPresence("coplay_playercount", std::to_string(GetHost()->GetConnectionCount()+1).c_str());
+        }
+        else if (GetRole() == eConnectionRole_INACTIVE && engine->IsConnected()) // On normal server
+        {
+            INetChannelInfo *netinfo = engine->GetNetChannelInfo();
+            std::string connect = "+connect ";
+            connect += netinfo->GetAddress();
+            SteamFriends()->SetRichPresence("connect",connect.c_str());
+        }
+        else
+        {
+            SteamFriends()->SetRichPresence("connect", "");
+        }
+        lastupdated = gpGlobals->realtime;
+    }
+#endif
 }
 
 void CCoplaySystem::LevelInitPostEntity()
@@ -207,7 +234,7 @@ void CCoplaySystem::JoinGame(GameRichPresenceJoinRequested_t *pParam)
 
 	std::string command = pParam->m_rgchConnect;
 	// People could put anything they want in the steam rich presence if they wanted to. Check its what we expect before running
-	if (command.empty() || command.find("+connect") != 0 || command.find("+coplay_connect") != 0
+	if (command.empty() || (command.find("+connect") != 0 && command.find("+coplay_connect") != 0)
 		|| command.find_first_of("\'\"\\/;") != std::string::npos )
 	{
 		ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay Warning] Got a bad join string ( %s ) "
@@ -327,6 +354,9 @@ void CCoplaySystem::PrintAbout(const CCommand& args)
     ConColorMsg(COPLAY_MSG_COLOR, "The loaded Coplay version is %s.\nBuilt on %s at %s GMT-0.\n\n", COPLAY_VERSION, __DATE__, __TIME__);
 
     ConColorMsg(COPLAY_MSG_COLOR, "Active Coplay build options:\n");
+#ifdef COPLAY_USE_LOBBIES
+     ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_USE_LOBBIES\n");
+#endif
 #ifdef COPLAY_DONT_UPDATE_RPC
     ConColorMsg(COPLAY_MSG_COLOR, " - COPLAY_DONT_UPDATE_RPC\n");
 #endif
