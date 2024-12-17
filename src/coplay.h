@@ -72,6 +72,7 @@ enum ConnectionEndReason // see the enum ESteamNetConnectionEnd in steamnetworki
     k_ESteamNetConnectionEnd_App_ServerFull,
     k_ESteamNetConnectionEnd_App_RemoteIssue,//couldn't open a socket
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
+    k_ESteamNetConnectionEnd_App_ConnectionFinished,
 
     // incoming connection rejected
     k_ESteamNetConnectionEnd_App_NotFriend,

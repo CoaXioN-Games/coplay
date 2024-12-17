@@ -69,6 +69,7 @@ bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
         break;
 
     case k_ESteamNetworkingConnectionState_ClosedByPeer:
+        SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_ClosedByPeer, "closedbypeer", true);
         CloseConnection();
 		stateFailed = true;
         break;
