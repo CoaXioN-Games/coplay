@@ -43,8 +43,11 @@ private:
 	void RemoveConnection(HSteamNetConnection hConnection, int reason, const char *pszDebug, bool bEnableLinger);
 
 private:
+#ifdef COPLAY_USE_LOBBIES
 	STEAM_CALLBACK(CCoplayHost, LobbyCreated,            LobbyCreated_t);
-
+#else
+	void LobbyCreated(LobbyCreated_t *pParam);
+#endif
 private:
 	HSteamListenSocket	m_hSocket;
 	CUtlVector<CCoplayConnection*> m_connections;
