@@ -197,7 +197,7 @@ void CCoplaySystem::ConnectToHost(CSteamID host)
 void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
 	bool stateFailed = false;
-	Msg("%i %i\n", pParam->m_info.m_eState, pParam->m_info.m_eEndReason);
+	//Msg("%i %i\n", pParam->m_info.m_eState, pParam->m_info.m_eEndReason);
     switch(m_role)
     {
 	case eConnectionRole_HOST:
