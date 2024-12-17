@@ -110,7 +110,7 @@ void CCoplaySystem::Update(float frametime)
 
 #ifndef COPLAY_DONT_UPDATE_RPC
 
-    // Connect info
+    // Connect Steam RPC
     static float lastupdated = 0;
     if (lastupdated + 1 < gpGlobals->realtime)
     {
@@ -126,10 +126,12 @@ void CCoplaySystem::Update(float frametime)
             std::string connect = "+connect ";
             connect += netinfo->GetAddress();
             SteamFriends()->SetRichPresence("connect",connect.c_str());
+            SteamFriends()->SetRichPresence("coplay_playercount", "");
         }
         else
         {
             SteamFriends()->SetRichPresence("connect", "");
+            SteamFriends()->SetRichPresence("coplay_playercount", "");
         }
         lastupdated = gpGlobals->realtime;
     }
@@ -195,6 +197,7 @@ void CCoplaySystem::ConnectToHost(CSteamID host)
 void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
 	bool stateFailed = false;
+	Msg("%i %i\n", pParam->m_info.m_eState, pParam->m_info.m_eEndReason);
     switch(m_role)
     {
 	case eConnectionRole_HOST:
@@ -215,7 +218,7 @@ void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
 void CCoplaySystem::LobbyJoined(LobbyEnter_t* pParam)
 {
     if (pParam->m_EChatRoomEnterResponse != k_EChatRoomEnterResponseSuccess
-        || GetRole() == eConnectionRole_HOST)
+        || (GetRole() == eConnectionRole_HOST && GetHost()->GetLobby() == pParam->m_ulSteamIDLobby))
         return;
 
 	// we've joined the lobby so attempt to connect to the host
