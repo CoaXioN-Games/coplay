@@ -188,10 +188,10 @@ void CCoplaySystem::SetRole(ConnectionRole role)
 	m_role = role;
 }
 
-void CCoplaySystem::ConnectToHost(CSteamID host)
+void CCoplaySystem::ConnectToHost(CSteamID host, std::string passcode)
 {
 	SetRole(eConnectionRole_CLIENT);
-	GetClient()->ConnectToHost(host);
+	GetClient()->ConnectToHost(host, passcode);
 }
 
 void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
@@ -313,7 +313,7 @@ void CCoplaySystem::CoplayConnect(const CCommand& args)
 	// if not a lobby, just connect to the host
 	if (steamid.BIndividualAccount())
     {
-        ConnectToHost(steamid);
+        ConnectToHost(steamid, args.Arg(2));
         return;
     }
     Warning("Coplay_Connect was called with an invalid SteamID! ( %llu )\n", steamid.ConvertToUint64());
@@ -327,12 +327,6 @@ void CCoplaySystem::OpenSocket(const CCommand& args)
 void CCoplaySystem::CloseSocket(const CCommand& args)
 {
     SetRole(eConnectionRole_INACTIVE);
-}
-
-void CCoplaySystem::ListLobbies(const CCommand& args)
-{
-    SteamAPICall_t apiCall = SteamMatchmaking()->RequestLobbyList();
-    m_lobbyListResult.Set(apiCall, this, &CCoplaySystem::OnListLobbiesCmd);
 }
 
 void CCoplaySystem::OnListLobbiesCmd(LobbyMatchList_t *pLobbyMatchList, bool IOFailure)
@@ -449,17 +443,7 @@ void CCoplaySystem::PrintStatus(const CCommand& args)
     Msg("Role: %s\nConnection Count: %i\n", role, count);
 }
 
-#if 0
-void CCoplaySystem::ReRandomizePassword(const CCommand& args)
-{
-    if (GetRole() != eConnectionRole_HOST)
-    {
-        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently hosting a game.");
-        return;
-    }
-    RechoosePassword();
-}
-
+#ifdef COPLAY_USE_LOBBIES
 void CCoplaySystem::ConnectToLobby(const CCommand& args)
 {
     // Steam appends '+connect_lobby (id64)' to launch options when boot joining
@@ -468,30 +452,19 @@ void CCoplaySystem::ConnectToLobby(const CCommand& args)
     engine->ClientCmd_Unrestricted(cmd.c_str());
 }
 
-void CCoplaySystem::InviteToLobby(const CCommand& args)
+void CCoplaySystem::ListLobbies(const CCommand& args)
 {
-    if (GetLobby().ConvertToUint64() == 0)
-    {
-        ConColorMsg(COPLAY_MSG_COLOR, "You aren't in a lobby.\n");
-        return;
-    }
-    SteamFriends()->ActivateGameOverlayInviteDialog(GetLobby());
-}
-
-
-// Debug commands
-void CCoplaySystem::DebugSendDummySteam(const CCommand& args)
-{
-	FOR_EACH_VEC(m_connections, i)
-	{
-		CCoplayConnection* con = m_connections[i];
-		if (!con)
-			continue;
-		char string[] = "Completely Random Test String (tm)";
-		int64 msgout;
-		SteamNetworkingSockets()->SendMessageToConnection(con->m_hSteamConnection, string, sizeof(string),
-			k_nSteamNetworkingSend_UnreliableNoDelay | k_nSteamNetworkingSend_UseCurrentThread,
-			&msgout);
-	}
+    SteamAPICall_t apiCall = SteamMatchmaking()->RequestLobbyList();
+    m_lobbyListResult.Set(apiCall, this, &CCoplaySystem::OnListLobbiesCmd);
 }
 #endif
+
+void CCoplaySystem::ReRandomizePassword(const CCommand& args)
+{
+    if (GetRole() != eConnectionRole_HOST)
+    {
+        ConColorMsg(COPLAY_MSG_COLOR, "You're not currently hosting a game.");
+        return;
+    }
+    GetHost()->RandomizePasscode();
+}

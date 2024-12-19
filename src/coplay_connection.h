@@ -40,6 +40,7 @@ public:
 
 private:
     CInterlockedInt m_deletionQueued;
+    bool            m_gameReady;
     // For when the steam connection is still being kept alive but there is no actual activity
     float m_lastPacketTime = 0; 
 };

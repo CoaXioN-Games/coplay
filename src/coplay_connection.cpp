@@ -32,6 +32,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn) : m_localSocket(
     m_hSteamConnection = hConn;
     m_lastPacketTime = gpGlobals->realtime;
     m_deletionQueued = false;
+    m_gameReady      = false;
 
     UDPsocket sock = NULL;
     // TODO - Do all ports need to be opened?
@@ -107,7 +108,6 @@ void CCoplayConnection::ConnectToHost()
 
 	// print out the IP address and port number
 	V_snprintf(cmd, sizeof(cmd), "connect %d.%d.%d.%d:%i coplay", ipnum[0], ipnum[1], ipnum[2], ipnum[3], m_port);
-	Msg("%s\n", cmd);
     engine->ClientCmd_Unrestricted(cmd);
 }
 
@@ -126,10 +126,8 @@ int CCoplayConnection::Run()
 
     int64 messageOut;
     
-    // TEMP IF TEMP IF TEMP IF
-    // FIX ME FIX ME FIX ME
-#if 0
-    if (!coplay_use_lobbies.GetBool())
+    // Send passcode if needed
+    if (!UseCoplayLobbies() && CCoplaySystem::GetInstance()->GetRole() == eConnectionRole_CLIENT)
     {
         // see if the server needs a password and wait till we're told we will be let in to start forwarding stuff
         while (!m_gameReady && !m_deletionQueued && m_timeStarted + coplay_timeoutduration.GetFloat() > gpGlobals->curtime)
@@ -144,22 +142,20 @@ int CCoplayConnection::Run()
                 std::string recvMsg((const char*)(InboundSteamMessages[i]->GetData()));
                 if (recvMsg == std::string(COPLAY_NETMSG_NEEDPASS))
                 {
-                    //Msg("Sending Password %s...\n",g_pCoplayConnectionHandler->Password);
-
-                    // TODO - find less gross way to access password
                     SteamNetworkingSockets()->SendMessageToConnection(m_hSteamConnection,
-                        g_pCoplayConnectionHandler->m_password.c_str(), g_pCoplayConnectionHandler->m_password.length(),
+                        CCoplaySystem::GetInstance()->GetClient()->GetPasscode().c_str(),
+                        CCoplaySystem::GetInstance()->GetClient()->GetPasscode().length(),
                         k_nSteamNetworkingSend_ReliableNoNagle | k_nSteamNetworkingSend_UseCurrentThread, &messageOut);
                 }
                 else if (recvMsg == std::string(COPLAY_NETMSG_OK))
                     m_gameReady = true;//Server said our password was good, start relaying packets
                 else
-                    ConColorMsg(COPLAY_DEBUG_MSG_COLOR, "[Coplay] Got unexpected handshake message, \"%s\"\n", recvMsg.c_str());
+                    Warning("[Coplay] Got unexpected handshake message, \"%s\"\n", recvMsg.c_str());
             }
         }
     }
-#endif 
 
+    // Ready to game
     while(!m_deletionQueued)
     {
         if (coplay_debuglog_scream.GetBool())
@@ -169,7 +165,7 @@ int CCoplayConnection::Run()
         if (m_localSocket == NULL || m_hSteamConnection == 0)
         {
             Warning("[Coplay Warning] A registered Coplay socket was invalid! Deleting.\n");
-            m_deletionQueued = true;
+            QueueForDeletion();
             continue;
         }
 

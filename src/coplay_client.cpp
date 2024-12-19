@@ -22,7 +22,7 @@ CCoplayClient::~CCoplayClient()
 {
 }
 
-void CCoplayClient::ConnectToHost(CSteamID host)
+void CCoplayClient::ConnectToHost(CSteamID host, std::string passcode)
 {
 	if (IsConnected())
         CloseConnection();
@@ -37,6 +37,7 @@ void CCoplayClient::ConnectToHost(CSteamID host)
         netID.SetSteamID(host);
 
     ConColorMsg(COPLAY_MSG_COLOR, "[Coplay] Attempting Connection to user with ID %llu....\n", netID.GetSteamID64());
+    m_passcode = passcode;
     SteamNetworkingSockets()->ConnectP2P(netID, 0, 0, NULL);
 }
 

@@ -43,7 +43,7 @@ extern ConVar coplay_use_lobbies;
 //YYYY-MM-DD-(a-z) if theres multiple in a day
 #define COPLAY_VERSION "2024-12-02-a"
 
-#define COPLAY_NETMSG_NEEDPASS "NeedPass"
+#define COPLAY_NETMSG_NEEDPASS "NeedPasscode"
 #define COPLAY_NETMSG_OK "OK"
 
 

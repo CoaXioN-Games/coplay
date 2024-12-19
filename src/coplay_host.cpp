@@ -18,6 +18,7 @@
 #include "coplay_connection.h"
 #include "coplay_system.h"
 
+
 void ChangeLobbyType(IConVar* var, const char* pOldValue, float flOldValue)
 {
    ConVarRef joinfilter(var);
@@ -32,6 +33,7 @@ void ChangeLobbyType(IConVar* var, const char* pOldValue, float flOldValue)
            (ELobbyType)(filter > -1 ? filter : 0));
 }
 
+extern ConVar coplay_timeoutduration;
 ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game? Will also call coplay_opensocket on server start if set above -1.\n"
                        "-1 : Off\n"
                        "0  : Invite Only\n"
@@ -148,6 +150,34 @@ void CCoplayHost::Update()
 		}
 	}
 
+	FOR_EACH_VEC_BACK(m_pendingConnections, i)
+	{
+		if (m_pendingConnections[i].m_startTime + coplay_timeoutduration.GetFloat() < gpGlobals->realtime)
+		{
+			SteamNetworkingSockets()->CloseConnection(m_pendingConnections[i].m_hConnection, k_ESteamNetConnectionEnd_Misc_Timeout,
+													  "pendingtimeout", false);
+			m_pendingConnections.Remove(i);
+			continue;
+		}
+		SteamNetworkingMessage_t *msg;
+		int numMessages = SteamNetworkingSockets()->ReceiveMessagesOnConnection(m_pendingConnections[i].m_hConnection, &msg, 1);
+		if (numMessages > 0)
+		{
+			std::string recvMsg((const char*)msg->GetData(), msg->GetSize());
+			Msg("Got msg %s\n", recvMsg.c_str());
+			if (recvMsg == GetPasscode())
+			{
+				if (!AddConnection(m_pendingConnections[i].m_hConnection))
+					SteamNetworkingSockets()->CloseConnection(m_pendingConnections[i].m_hConnection,
+															  k_ESteamNetConnectionEnd_App_RemoteIssue, "failedlocalconnection", true);
+			}
+			else
+				SteamNetworkingSockets()->CloseConnection(m_pendingConnections[i].m_hConnection,
+														  k_ESteamNetConnectionEnd_App_BadPassword, "badpassword", false);
+			m_pendingConnections.Remove(i);
+		}
+	}
+
 	if (UseCoplayLobbies())
 	{
 		ConVarRef hostname("hostname");
@@ -161,7 +191,6 @@ void CCoplayHost::Update()
 bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
 	bool stateFailed = false;
-	//Msg("%i\n", pParam->m_info.m_eState);
     // Somehow left without us catching it, map transistion load error or cancelation probably
     if (!engine->IsConnected() || !IsHosting())
     {
@@ -194,10 +223,8 @@ bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallbac
                     RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_NotFriend, "accessdeny", true);
                 break;
 
-            // This is for passwords, we cant get the password before making a connection so dont make a CCoplayConnection until we get it
-            // Connections in PendingConnections are run in CCoplaySystem::Update() waiting to recieve it
             case eP2PFilter_CONTROLLED:
-                //TODO: Create pending connection
+                SteamNetworkingSockets()->AcceptConnection(pParam->m_hConn); // We check if theyre actually allowed in elsewhere for this
                 break;
 
 			// sent something that we dont know how to handle
@@ -209,9 +236,17 @@ bool CCoplayHost::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallbac
         break;
 
     case k_ESteamNetworkingConnectionState_Connected:
-		// add the connection to our list
-        if (!AddConnection(pParam->m_hConn))
-            RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "failedlocalconnection", true);
+        // Need a passowrd to continue
+        if (coplay_joinfilter.GetInt() == eP2PFilter_CONTROLLED)
+        {
+            CreatePendingConnection(pParam->m_hConn);
+        }
+        else
+        {
+            // add the connection to our list
+            if (!AddConnection(pParam->m_hConn))
+                RemoveConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_RemoteIssue, "failedlocalconnection", true);
+        }
         break;
 
     // Theres no actual network activity here but we need to clean it up
@@ -260,9 +295,19 @@ bool CCoplayHost::AddConnection(HSteamNetConnection hConnection)
 
 	// create a new connection
 	CCoplayConnection* connection = new CCoplayConnection(hConnection);
+	SteamNetworkingSockets()->SendMessageToConnection(hConnection, COPLAY_NETMSG_OK, sizeof(COPLAY_NETMSG_OK)
+													  ,k_nSteamNetworkingSend_ReliableNoNagle, NULL);
+
     connection->Start();
     m_connections.AddToTail(connection);
     return true;
+}
+
+void CCoplayHost::CreatePendingConnection(HSteamNetConnection hConnection)
+{
+    m_pendingConnections.AddToTail(CCoplayPendingConnection(hConnection));
+    SteamNetworkingSockets()->SendMessageToConnection(hConnection, COPLAY_NETMSG_NEEDPASS, sizeof(COPLAY_NETMSG_NEEDPASS)
+                                                      ,k_nSteamNetworkingSend_ReliableNoNagle, NULL);
 }
 
 void CCoplayHost::RemoveConnection(HSteamNetConnection hConnection, int reason, const char *pszDebug, bool bEnableLinger)
@@ -281,4 +326,10 @@ void CCoplayHost::RemoveConnection(HSteamNetConnection hConnection, int reason, 
 void CCoplayHost::LobbyCreated(LobbyCreated_t *pParam)
 {
     m_lobby = pParam->m_ulSteamIDLobby;
+}
+
+CCoplayPendingConnection::CCoplayPendingConnection(HSteamNetConnection connection)
+{
+    m_hConnection = connection;
+    m_startTime   = gpGlobals->realtime;
 }

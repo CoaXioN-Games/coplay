@@ -56,7 +56,7 @@ public:
     std::string GetConnectCommand();
 private:
 	void SetRole(ConnectionRole role);
-	void ConnectToHost(CSteamID host);
+	void ConnectToHost(CSteamID host, std::string passcode = "");
 	void OnListLobbiesCmd(LobbyMatchList_t *pLobbyMatchList, bool IOFailure);
 
 
@@ -78,23 +78,14 @@ private:
     // Commands
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_opensocket", OpenSocket, "Manually (re)open your game to P2P connections", FCVAR_NONE);
     CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_closesocket", CloseSocket, "Manually close your game to P2P connections", FCVAR_NONE);
-    CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_listlobbies", ListLobbies, "List all joinable lobbies", FCVAR_NONE);
-
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_about", PrintAbout, "", FCVAR_NONE);
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_invite", InvitePlayer, "Prints a command for other people to join you", FCVAR_NONE);
-#if 0
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_rerandomize_password", ReRandomizePassword, "Randomizes the password given by coplay_getconnectcommand", FCVAR_NONE);
-    CON_COMMAND_MEMBER_F(CCoplaySystem, "connect_lobby", ConnectToLobby, "", FCVAR_HIDDEN);
-#endif
-	// Debug commands
 	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_status", PrintStatus, "", FCVAR_NONE);
-#if 0
-	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_debug_createdummyconnection", DebugCreateDummyConnection, "Create a empty connection", FCVAR_DEVELOPMENTONLY);
-	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_debug_senddummy_steam", DebugSendDummySteam, "", FCVAR_CLIENTDLL);
-	CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_listinterfaces", ListInterfaces, "", FCVAR_CLIENTDLL);
 
-private:
-
+#ifdef COPLAY_USE_LOBBIES
+    CON_COMMAND_MEMBER_F(CCoplaySystem, "coplay_listlobbies", ListLobbies, "List all joinable lobbies", FCVAR_NONE);
+    CON_COMMAND_MEMBER_F(CCoplaySystem, "connect_lobby", ConnectToLobby, "", FCVAR_HIDDEN);
 #endif
 
 private:

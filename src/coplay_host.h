@@ -17,7 +17,9 @@
 #include "steam/isteamnetworkingutils.h"
 #include "steam/isteammatchmaking.h"
 
-class CCoplayConnection;
+class CCoplayConnection; 
+class CCoplayPendingConnection;
+
 class CCoplayHost
 {
 public:
@@ -40,6 +42,7 @@ public:
 
 private:
 	bool AddConnection(HSteamNetConnection hConnection);
+	void CreatePendingConnection(HSteamNetConnection hConnection);
 	void RemoveConnection(HSteamNetConnection hConnection, int reason, const char *pszDebug, bool bEnableLinger);
 
 private:
@@ -51,10 +54,18 @@ private:
 private:
 	HSteamListenSocket	m_hSocket;
 	CUtlVector<CCoplayConnection*> m_connections;
+	CUtlVector<CCoplayPendingConnection> m_pendingConnections;
 
 	bool				m_usingPassword;
 	CSteamID			m_lobby;
 	std::string			m_passcode;
+};
+
+struct CCoplayPendingConnection
+{
+	CCoplayPendingConnection(HSteamNetConnection connection);
+	HSteamNetConnection m_hConnection;
+	float m_startTime;
 };
 
 #endif // COPLAY_HOST_H
