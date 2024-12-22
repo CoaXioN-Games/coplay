@@ -69,9 +69,11 @@ to it somewhere at the top.
 
 3. Rerun your VPC script and build.
 
-4. If you have linker errors when building on Linux delete the libSDL2.so found in the `src/lib/public/linux32` folder and retry.
+4. If you have linker errors when building on Linux delete or rename the libSDL2.so found in the `src/lib/public/linux32` folder and retry.
 
 5. Add the SDL2_net.dll and libSDL2_net.so (if your mod supports Linux) found in coplay/lib to you mod's /bin folder.
+
+Sometimes Linux will look for libSDL2_net-2.0.so instead (depending on compiler configuration?), if it gives the "Can't load library client" error try checking what its looking for with `ldd client.so`
 
 ### Additional VPC Options
 
@@ -101,6 +103,15 @@ Reading all of this README is recomended.
 
 ## Can I DM a contributor on Discord for support?
 You will most likely be refered to this page if you do. If you have found an undocumented bug open an issue.
+
+## Is there a place to discuss Coplay?
+There is a #coplay channel in the public [CoaXioN Discord](https://discord.gg/dSfXTNEGP7) if you want to talk shop, feel free to drop by and ask about things.
+
+## Why is this under the MPL2?
+1. Gatekeeping anything on an engine as old and impossible to make money with as Source is juvenile and counter-productive to mods getting made. Sharing is Caring.
+2. I do not want to read bug reports about bugs I did not create or approve and cannot inspect.
+
+If the rules around modification is relevant to you and you cant read legalese atleast read the third section of [this summary](https://openalternative.co/licenses/mpl-2).
 
 ## Whats your favorite color?
 Green, thanks for asking.
