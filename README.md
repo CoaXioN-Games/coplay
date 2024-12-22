@@ -1,47 +1,48 @@
-<p align="center"> <img width="500" src="https://coaxion.games/res/coplayLogo.svg"/> </p>
+<p align="center"> <img width="500" alt="Coplay Logo" src="https://coaxion.games/res/coplayLogo.svg"/> </p>
 
 Logo made by FLARE145.
 
 # Coplay
-A MPL2 licensed Source Engine Multiplayer SDK addon that enables the use of the Steam Datagram Relay for P2P connections with support for Linux and Windows.
+A MPL2 licensed Source Engine Multiplayer SDK addon that enables the use of the Steam Datagram Relay with support for Linux and Windows.
 
 If your mod implements Coplay please redirrect issue reports related to it [here](https://github.com/CoaXioN-Games/coplay/issues/new/choose).
 
+## Steam Lobbies
+Coplay provides a bare bones implementation for Steam's Matchmaking Lobbies that you can enable if desired. You should only do so if:
+1. Your mod has its own unique Steam appid.
+2. Your mod does not plan to use lobbies for anything other than server enumeration.
+
+Otherwise nothing will work or you will be dissapointed.
+
 ## Usage
-Mods implementing Coplay can make their own UI if they want to but there are commands and cvars that come standard.
 
 | Command | Description | Usage |
 | :----- | :--------- | :--- |
 | coplay_about | Links to this Github page and prints the current version and enabled build options | `coplay_about` |
-| coplay_connect | Connect to a server with a Ipv4 address, User SteamID64 or Lobby SteamID64 * | `coplay_connect (IP or SteamID64)` |
-| coplay_getconnectcommand | Prints and copies to your clipboard a command others can use to connect to your game | `coplay_getconnectcommand` |
-| coplay_opensocket | Allows your game to be joined via Coplay, this is automatically called on server creation if coplay_joinfilter is above -1 | `coplay_opensocket` |
+| coplay_connect | Connect to a server with a Ipv4 address or SteamID64 (and passcode) | `coplay_connect (IP or SteamID64[passcode])` |
+| coplay_opensocket | Allows your game to be joined via Coplay, this is automatically called on server creation if coplay_autoopen is 1 | `coplay_opensocket` |
 | coplay_closesocket | Disables your game from being joined via Coplay, this will also kick currently connected players | `coplay_closesocket` |
 | coplay_listlobbies* | List joinable lobbies | `coplay_listlobbies` |
-| coplay_invite* | Brings up the game invite dialog if you're in a game | `coplay_invite` |
+| coplay_invite | Either prints and copies to your clipboard a command others can use to connect to your game or brings up the Steam invite dialog if using Coplay Lobbies | `coplay_invite` |
 
 
 | Cvar | Description | Default value |
 | :-- | :--------- | :----------- |
-| coplay_joinfilter | Sets who is allowed to join the game. -1: Off, 0: Invite Only, 1: Friends only, 2: Anyone(Lobby advertised if available*) | 1 |
+| coplay_autoopen | Will automatically start listening for incoming Steam connections on map start if set | 1 |
+| coplay_joinfilter | Sets who is allowed to join the game. -1: Off, 0: Require random passcode, 1: Friends only, 2: Anyone | 1 |
 | coplay_timeoutduration | How long in seconds to keep a connection around that has no game activity | 5 |
-| coplay_portrange_begin ** | Where to start looking for ports to bind on | 3600 |
-| coplay_portrange_end ** | Where to stop looking for ports to bind on | 3700 |
+| coplay_portrange_begin * | Where to start looking for ports to bind on | 3600 |
+| coplay_portrange_end * | Where to stop looking for ports to bind on | 3700 |
 | coplay_connectionthread_hz | Number of times to service connections per second, it's unlikely you'll need to change this | 300 |
-| coplay_forceloopback | Uses the loopback interface instead of others, only change this if you have issues | 1 |
 
-\* : Only available when Steam Lobbies are, lobbies can only be enabled for mods with an appid on Steam.
-
-\** :  Only change this if issues arise, a range of at least 64 is recommended.
+\* :  Only change this if issues arise, a range of at least 64 is recommended.
 
 # Adding to your mod
 
-## Prerequistes
-
-### Updating the Steamworks SDK
+## Updating the Steamworks SDK
 A more updated Steamworks SDK than the one that comes with the Source SDK is required to use Coplay.
 
-Steamworks SDK version above [157](https://partner.steamgames.com/downloads/steamworks_sdk_157.zip) require more work to implement into the Source SDK, if you wish to use the [latest](https://partner.steamgames.com/downloads/steamworks_sdk_160.zip) you need to
+Steamworks SDK version above [157](https://partner.steamgames.com/downloads/steamworks_sdk_157.zip) require more work to implement into the Source SDK, if you wish to use the [latest](https://partner.steamgames.com/downloads/steamworks_sdk_161.zip) you need to
 
 1. Remove all references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` and replace with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`.)
 
@@ -68,16 +69,17 @@ to it somewhere at the top.
 
 3. Rerun your VPC script and build.
 
-4. If you have linker issues when building on Linux delete the libSDL2.so found in your mod's `src/lib/public/linux32` folder and retry.
+4. If you have linker errors when building on Linux delete the libSDL2.so found in the `src/lib/public/linux32` folder and retry.
 
 5. Add the SDL2_net.dll and libSDL2_net.so (if your mod supports Linux) found in coplay/lib to you mod's /bin folder.
 
 ### Additional VPC Options
 
+All these options are off by default.
 | Name | Function |
 | :-- |  :------ |
-| COPLAY_USE_LOBBIES | Makes Coplay use Steam's lobby system for managing connections, this allows for games with Coplay enabled to list themselves on Steam. This requires your mod to have an AppID on Steam to function. |
-| COPLAY_DONT_UPDATE_RPC | Disables Coplay updating Steam Rich Presence, if you would rather use your own implementation. |
+| COPLAY_USE_LOBBIES | Enable Coplay's lobby implementation mentioned above. |
+| COPLAY_DONT_UPDATE_RPC | Disables Coplay updating Steam Rich Presence for the key "connect", if you would rather use your own implementation. |
 | COPLAY_DONT_LINK_SDL2 |  Disables Coplay's linking to SDL2, for if you already bind to it elsewhere. |
 | COPLAY_DONT_LINK_SDL2_NET | Same as above but for SDL2_net. |
 
@@ -86,22 +88,16 @@ To use these options place `$Conditional OPTION_NAME "1"` above the Coplay `$Inc
 # FAQ
 
 ## How?
-Coplay is a network relay that maps ports on your local machine to Steam datagram connections, this allows it to not require modifing engine code.
-
-## Whats the difference if Steam's Lobby system is available?
-Lobbies allow user hosted games to be advertised and joined akin to the server browser.
+Coplay is a network relay that maps ports on your local machine to Steam datagram connections with some bells and whistles to make the expirence smoother than an external program.
 
 ## My game isn't in the server browser!
-Thats not what this does, if you are able to use lobbies look at the code for coplay_listlobbies for a starting point on how to make your own menu.
+Thats not what this claims to do.
 
 ## Does custom content work?
 Yes, as normal.
 
 ## My mod wont launch anymore! "Can't load library client"
-Reading the instructions is recomended.
-
-## I Can't move in my own local server!
-Reading the instructions is recomended.
+Reading all of this README is recomended.
 
 ## Can I DM a contributor on Discord for support?
 You will most likely be refered to this page if you do. If you have found an undocumented bug open an issue.
