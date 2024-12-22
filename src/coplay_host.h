@@ -17,8 +17,8 @@
 #include "steam/isteamnetworkingutils.h"
 #include "steam/isteammatchmaking.h"
 
-class CCoplayConnection; 
-class CCoplayPendingConnection;
+class  CCoplayConnection;
+struct CCoplayPendingConnection;
 
 class CCoplayHost
 {

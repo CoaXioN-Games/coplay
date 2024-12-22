@@ -333,7 +333,7 @@ void CCoplaySystem::OnListLobbiesCmd(LobbyMatchList_t *pLobbyMatchList, bool IOF
 {
     ConColorMsg(COPLAY_MSG_COLOR, "Available Lobbies:\n");
     ConColorMsg(COPLAY_MSG_COLOR, "%-32s | %-16s | %-19s | Player Count\n", "Hostname", "Map", "ID");
-    for (int i = 0; i < pLobbyMatchList->m_nLobbiesMatching; i++)
+    for (uint32 i = 0; i < pLobbyMatchList->m_nLobbiesMatching; i++)
     {
         CSteamID lobby = SteamMatchmaking()->GetLobbyByIndex(i);
         ConColorMsg(COPLAY_MSG_COLOR, "%-32s | %-16s | %-19llu | %2i/%2i\n",
