@@ -153,9 +153,11 @@ void CCoplaySystem::LevelInitPostEntity()
 
 void CCoplaySystem::LevelShutdownPreEntity()
 {
-	if (!engine->IsConnected())
-		SetRole(eConnectionRole_INACTIVE);
-
+	// if (!engine->IsConnected())
+	// {
+	// 	Msg("Changing Role.\n");
+	// 	SetRole(eConnectionRole_INACTIVE);
+	// }
 }
 
 void CCoplaySystem::SetRole(ConnectionRole role)
@@ -197,7 +199,7 @@ void CCoplaySystem::ConnectToHost(CSteamID host, std::string passcode)
 void CCoplaySystem::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam)
 {
 	bool stateFailed = false;
-	//Msg("%i %i\n", pParam->m_info.m_eState, pParam->m_info.m_eEndReason);
+	//Msg("%i %i %s\n", pParam->m_info.m_eState, pParam->m_info.m_eEndReason, pParam->m_info.m_szEndDebug);
     switch(m_role)
     {
 	case eConnectionRole_HOST:
