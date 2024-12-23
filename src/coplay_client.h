@@ -22,10 +22,9 @@ class CCoplayClient
 {
 public:
 	CCoplayClient();
-	~CCoplayClient();
 
 	void ConnectToHost(CSteamID host, std::string passcode = "");
-	void CloseConnection();
+	void CloseConnection(int reason = k_ESteamNetConnectionEnd_App_ConnectionFinished);
 	bool ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallback_t* pParam);
 	bool IsConnected() const { return m_hConn != k_HSteamNetConnection_Invalid; }
 	std::string GetPasscode(){return m_passcode;}

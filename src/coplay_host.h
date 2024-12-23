@@ -24,7 +24,6 @@ class CCoplayHost
 {
 public:
 	CCoplayHost();
-	~CCoplayHost();
 
 	void StartHosting();
 	void StopHosting();
@@ -56,7 +55,6 @@ private:
 	CUtlVector<CCoplayConnection*> m_connections;
 	CUtlVector<CCoplayPendingConnection> m_pendingConnections;
 
-	bool				m_usingPassword;
 	CSteamID			m_lobby;
 	std::string			m_passcode;
 };

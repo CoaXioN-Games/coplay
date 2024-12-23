@@ -33,6 +33,7 @@ CCoplayConnection::CCoplayConnection(HSteamNetConnection hConn) : m_localSocket(
     m_lastPacketTime = gpGlobals->realtime;
     m_deletionQueued = false;
     m_gameReady      = false;
+    m_endReason      = k_ESteamNetConnectionEnd_App_ConnectionFinished;
 
     UDPsocket sock = NULL;
     // TODO - Do all ports need to be opened?
@@ -253,7 +254,7 @@ int CCoplayConnection::Run()
     //Cleanup
     SDLNet_FreePacketV(LocalInboundPackets);
     SDLNet_UDP_Close(m_localSocket);
-    SteamNetworkingSockets()->CloseConnection(m_hSteamConnection, k_ESteamNetConnectionEnd_App_ConnectionFinished, "", false);
+    SteamNetworkingSockets()->CloseConnection(m_hSteamConnection, m_endReason, "", true);
 
     if (coplay_debuglog_socketcreation.GetBool())
     {

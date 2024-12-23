@@ -36,7 +36,7 @@ void ChangeLobbyType(IConVar* var, const char* pOldValue, float flOldValue)
 extern ConVar coplay_timeoutduration;
 ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed to connect to our Game? Will also call coplay_opensocket on server start if set above -1.\n"
                        "-1 : Off\n"
-                       "0  : Invite Only\n"
+                       "0  : Controlled\n"
                        "1  : Friends Only\n"
                        "2  : Anyone\n",
                        true, -1, true, 2
@@ -45,12 +45,7 @@ ConVar coplay_joinfilter("coplay_joinfilter", "-1", FCVAR_ARCHIVE, "Whos allowed
 
 CCoplayHost::CCoplayHost() :
 	m_hSocket(k_HSteamListenSocket_Invalid),
-	m_usingPassword(false),
 	m_lobby(k_steamIDNil)
-{
-}
-
-CCoplayHost::~CCoplayHost()
 {
 }
 
@@ -99,7 +94,7 @@ void CCoplayHost::StartHosting()
     }
     else
     {
-		// we're not using lobbies, so just generate a random passcode the user will need to provide
+        // we're not using lobbies, so just generate a random passcode the user will need to provide if we're using joinfilter 0
         RandomizePasscode();
     }
 }

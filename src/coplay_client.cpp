@@ -16,10 +16,9 @@
 
 CCoplayClient::CCoplayClient()
 {
-}
-
-CCoplayClient::~CCoplayClient()
-{
+	m_hConn = k_HSteamNetConnection_Invalid;
+	m_hostLobby.SetFromUint64(0);
+	m_pConnection = nullptr;
 }
 
 void CCoplayClient::ConnectToHost(CSteamID host, std::string passcode)
@@ -65,16 +64,19 @@ bool CCoplayClient::ConnectionStatusUpdated(SteamNetConnectionStatusChangedCallb
 
     case k_ESteamNetworkingConnectionState_ProblemDetectedLocally:
         SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_Misc_Timeout, "timeout", true);
-        CloseConnection();
+        CloseConnection(k_ESteamNetConnectionEnd_Misc_Timeout);
         stateFailed = true;
         break;
 
     case k_ESteamNetworkingConnectionState_ClosedByPeer:
         SteamNetworkingSockets()->CloseConnection(pParam->m_hConn, k_ESteamNetConnectionEnd_App_ClosedByPeer, "closedbypeer", true);
-        CloseConnection();
+        CloseConnection(k_ESteamNetConnectionEnd_App_ClosedByPeer);
 		stateFailed = true;
         break;
     }
+
+    if (pParam->m_info.m_eEndReason == k_ESteamNetConnectionEnd_App_BadPassword)
+            Warning("Bad Password.\n");
 
 	return stateFailed;
 }
@@ -92,7 +94,7 @@ bool CCoplayClient::CreateConnection(HSteamNetConnection hConnection)
     return true;
 }
 
-void CCoplayClient::CloseConnection()
+void CCoplayClient::CloseConnection(int reason)
 {
     if (m_hostLobby != k_steamIDNil)
     {
@@ -102,7 +104,7 @@ void CCoplayClient::CloseConnection()
 
     if (m_pConnection)
     {
-        m_pConnection->QueueForDeletion();
+        m_pConnection->QueueForDeletion(reason);
         m_pConnection->Join();
         delete m_pConnection;
         m_pConnection = nullptr;
