@@ -40,8 +40,7 @@ extern ConVar coplay_use_lobbies;
 
 #define COPLAY_MAX_PACKETS 8 // max packets proccessed in a single loop of running the connection.
 
-//YYYY-MM-DD-(a-z) if theres multiple in a day
-#define COPLAY_VERSION "2024-12-02-a"
+#define COPLAY_VERSION "1.3" // Don't change for your PR, a maintainer will update this
 
 #define COPLAY_NETMSG_NEEDPASS "NeedPasscode"
 #define COPLAY_NETMSG_OK "OK"
@@ -70,9 +69,9 @@ enum ConnectionEndReason // see the enum ESteamNetConnectionEnd in steamnetworki
 {
     k_ESteamNetConnectionEnd_App_NotOpen = 1001,
     k_ESteamNetConnectionEnd_App_ServerFull,
-    k_ESteamNetConnectionEnd_App_RemoteIssue,//couldn't open a socket
+    k_ESteamNetConnectionEnd_App_RemoteIssue,// Couldn't open a socket
     k_ESteamNetConnectionEnd_App_ClosedByPeer,
-    k_ESteamNetConnectionEnd_App_ConnectionFinished,
+    k_ESteamNetConnectionEnd_App_ConnectionFinished,// Everything went as expected
 
     // incoming connection rejected
     k_ESteamNetConnectionEnd_App_NotFriend,
