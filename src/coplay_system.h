@@ -96,5 +96,7 @@ private:
 
 	CCoplayClient	   m_client;
 	CCoplayHost		   m_host;
+
+	std::string	m_queuedCommand;
 };
 #endif
