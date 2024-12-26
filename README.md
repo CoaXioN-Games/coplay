@@ -14,6 +14,8 @@ Coplay provides a bare bones implementation for Steam's Matchmaking Lobbies that
 
 Otherwise nothing will work or you will be dissapointed.
 
+This system may be seperated in the future.
+
 ## Usage
 
 | Command | Description | Usage |
@@ -27,15 +29,16 @@ Otherwise nothing will work or you will be dissapointed.
 
 
 | Cvar | Description | Default value |
-| :-- | :--------- | :----------- |
+| :----- | :--------- | :----------- |
 | coplay_autoopen | Will automatically start listening for incoming Steam connections on map start if set | 1 |
 | coplay_joinfilter | Sets who is allowed to join the game. -1: Off, 0: Require random passcode, 1: Friends only, 2: Anyone | 1 |
 | coplay_timeoutduration | How long in seconds to keep a connection around that has no game activity | 5 |
-| coplay_portrange_begin * | Where to start looking for ports to bind on | 3600 |
-| coplay_portrange_end * | Where to stop looking for ports to bind on | 3700 |
+| coplay_portrange_begin ** | Where to start looking for ports to bind on | 3600 |
+| coplay_portrange_end ** | Where to stop looking for ports to bind on | 3700 |
 | coplay_connectionthread_hz | Number of times to service connections per second, it's unlikely you'll need to change this | 300 |
 
-\* :  Only change this if issues arise, a range of at least 64 is recommended.
+\*  :  Only available when $COPLAY_USE_LOBBIES is enabled.
+\** :  Only change this if issues arise, a range of at least 64 is recommended.
 
 # Adding to your mod
 
@@ -73,14 +76,14 @@ to it somewhere at the top.
 
 5. Add the SDL2_net.dll and libSDL2_net.so (if your mod supports Linux) found in coplay/lib to you mod's /bin folder.
 
-Sometimes Linux will look for libSDL2_net-2.0.so instead (depending on compiler configuration?), if it gives the "Can't load library client" error try checking what its looking for with `ldd client.so`
+Sometimes Linux will look for libSDL2_net-2.0.so instead (depending on compiler configuration?), if it gives the "Can't load library client" error try checking what its looking for with `ldd client.so` and rename accordingly.
 
 ### Additional VPC Options
 
 All these options are off by default.
 | Name | Function |
-| :-- |  :------ |
-| COPLAY_USE_LOBBIES | Enable Coplay's lobby implementation mentioned above. |
+| :--- |  :------ |
+| COPLAY_USE_LOBBIES | Enable Coplay's lobby implementation described above. |
 | COPLAY_DONT_UPDATE_RPC | Disables Coplay updating Steam Rich Presence for the key "connect", if you would rather use your own implementation. |
 | COPLAY_DONT_LINK_SDL2 |  Disables Coplay's linking to SDL2, for if you already bind to it elsewhere. |
 | COPLAY_DONT_LINK_SDL2_NET | Same as above but for SDL2_net. |
@@ -111,7 +114,7 @@ There is a #coplay channel in the public [CoaXioN Discord](https://discord.gg/dS
 1. Gatekeeping anything on an engine as old and impossible to make money with as Source is juvenile and counter-productive to mods getting made. Sharing is Caring.
 2. I do not want to read bug reports about bugs I did not create or approve and cannot inspect.
 
-If the rules around modification is relevant to you and you cant read legalese atleast read the third section of [this summary](https://openalternative.co/licenses/mpl-2).
+If the rules around modification and redistribution is relevant to you and you cant read legalese atleast read the third section of [this summary](https://openalternative.co/licenses/mpl-2).
 
 ## Whats your favorite color?
 Green, thanks for asking.
