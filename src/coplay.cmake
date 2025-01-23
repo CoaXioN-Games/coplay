@@ -12,8 +12,18 @@
 
 include_guard( GLOBAL )
 
-set( COPLAY_LIBDIR "${SRCDIR}/coplay/lib/${PLATFORM_SUBDIR}" )
+if( UNIX )
+	set( COPLAY_LIB_SUBDIR "linux32" )
+else()
+	set( COPLAY_LIB_SUBDIR "" )
+endif()
+
+set( COPLAY_LIBDIR "${SRCDIR}/coplay/lib/${COPLAY_LIB_SUBDIR}" )
 set( COPLAY_SRCDIR "${SRCDIR}/coplay/src" )
+
+if ( NOT COMMAND SRC_GRP )
+	include( "${COPLAY_SRCDIR}/srcgrp.cmake" )
+endif()
 
 set( COPLAY_SOURCE_FILES )
 BEGIN_SRC( COPLAY_SOURCE_FILES "Source Files" )
