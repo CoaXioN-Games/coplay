@@ -14,7 +14,7 @@ Coplay provides a bare bones implementation for Steam's Matchmaking Lobbies that
 
 Otherwise nothing will work or you will be dissapointed.
 
-This system may be seperated in the future.
+This system may be seperated or removed in the future.
 
 ## Usage
 
@@ -49,7 +49,7 @@ Steamworks SDK version above [157](https://partner.steamgames.com/downloads/stea
 
 1. Remove all references to `CSteamAPIContext`/`g_SteamAPIContext`/`steamapicontext` and replace with the new global accessor equivelent (something like `steamapicontext->SteamFriends()->...` turns to `SteamFriends()->...`.)
 
-2. Remove clientsteamcontext.(cpp/h) from client_base.vpc.
+2. Remove clientsteamcontext.(cpp/h) from client_base.vpc. ( or your CMake source file list )
 
 3. Remove all calls to SteamAPI_Init().
 
@@ -59,7 +59,7 @@ After you might have done that you can:
 
 2. Replace the steam_api.lib and libsteam_api.so files found in `lib/public` and `lib/public/linux32` with the ones in the zip under the folder `redistributable_bin`. Make sure to copy the 32 bit versions.
 
-3. Rerun your VPC script and build. Any remaining errors are up to you to fix but the SDK doesn't have many by default.
+3. Rerun your project creator script and build. Any remaining errors are up to you to fix but the SDK doesn't have many by default.
 
 
 ## Adding Coplay
@@ -68,9 +68,9 @@ After you might have done that you can:
 
 2. Open your mod's client .vpc file, and add the line
 `$Include "$SRCDIR\coplay\src\coplay.vpc"`
-to it somewhere at the top.
+to it somewhere at the top. ( If you use CMake see the section for it below )
 
-3. Rerun your VPC script and build.
+3. Rerun your project creator script and build.
 
 4. If you have linker errors when building on Linux delete or rename the libSDL2.so found in the `src/lib/public/linux32` folder and retry.
 
@@ -78,7 +78,7 @@ to it somewhere at the top.
 
 Sometimes Linux will look for libSDL2_net-2.0.so instead (depending on compiler configuration?), if it gives the "Can't load library client" error try checking what its looking for with `ldd client.so` and rename accordingly.
 
-### Additional VPC Options
+### Additional Options
 
 All these options are off by default.
 | Name | Function |
@@ -89,6 +89,19 @@ All these options are off by default.
 | COPLAY_DONT_LINK_SDL2_NET | Same as above but for SDL2_net. |
 
 To use these options place `$Conditional OPTION_NAME "1"` above the Coplay `$Include` for each one you want to enable. ( ex.`$Conditional COPLAY_USE_LOBBIES "1"` )
+If you are using CMake instead of VPC see the section below.
+
+# Using with CMake
+
+Coplay supplies a .cmake file within the `src` folder. Include it somewhere in your CMake files and use the function `target_use_coplay` with your client target and desired options.
+
+An example:
+```
+include( "${SRCDIR}/coplay/src/coplay.cmake" )
+target_use_coplay( TARGET client_dmcr USE_LOBBIES DONT_LINK_SDL2 )
+
+```
+Note that option names do not have the `COPLAY_` prefix when using CMake.
 
 # FAQ
 
