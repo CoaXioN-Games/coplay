@@ -1,3 +1,5 @@
+# ⚠️ Archival Notice ⚠️
+The Team Fortress 2 SDK that was released in Feburary 2025 included support for Steam Networking in engine, this is available as a checkbox in the server creation dialog for all updated mods. Coplay is now mostly useless except for as a reference, and will no longer be updated.
 <p align="center"> <img width="500" alt="Coplay Logo" src="https://coaxion.games/res/coplayLogo.svg"/> </p>
 
 Logo made by FLARE145.
